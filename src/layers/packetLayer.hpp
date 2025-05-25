@@ -88,7 +88,8 @@ private:
     {
         if (m_handler->transiveDone != nullptr)
         {
-            bool continue = m_handler->transiveDone();
+            bool continueCommand = m_handler->transiveDone();
+            if (!continueCommand) m_handler = &m_defaultHandler;
         } 
     }
 
