@@ -5,13 +5,13 @@ struct TransiveHandler
 {
     using InitCallback = void(*)(std::span<const uint8_t>);
     using TransiveCallback = uint16_t(*)();
-    using TraniveDoneCallback = bool(*)();
+    using TransiveDoneCallback = bool(*)();
 
     std::span<const uint8_t> userdata;
 
     InitCallback init;
     TransiveCallback transive;
-    TraniveDoneCallback transiveDone;
+    TransiveDoneCallback transiveDone;
 };
 
 class PacketLayer
@@ -47,6 +47,8 @@ public:
     std::span<const uint8_t> getCommand { return std::span(m_receivedCommand); }
 
     void reset() { m_state = TransiveState::handshake; }
+
+    bool idle () { return m_handler == &m_defaultHandler; }
 
 private:
     uint16_t onTransive(uint16_t rxBytes)
