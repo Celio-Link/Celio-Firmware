@@ -1,12 +1,28 @@
 #include <span>
 
-enum class ConnectionStatus
-{
-    open,
-    closed
-};
+#include "../layers/packetLayer.hpp"
 
-class EnterTraderoom
+#pragma once
+
+class EnterTradeRoom
 {
-    ConnectionStatus process(std::span<const uint8_t> command);
+
+    enum class BlockCommandState : uint8_t
+    {
+        LinkPlayer = 0x00,
+        TrainerCard = 0x01
+    };
+
+public:
+    EnterTradeRoom(PacketLayer& layer) : m_packetLayer(layer)
+    {}
+
+    void process();
+
+private:
+
+    BlockCommandState m_blockState = BlockCommandState::LinkPlayer;
+    PacketLayer& m_packetLayer;
+    struct k_sem m_commandSemaphore;
+    std::array<uint16_t, 8> m_currentCommand;
 };

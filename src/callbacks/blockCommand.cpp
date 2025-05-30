@@ -1,4 +1,4 @@
-#include "blockCommand.h"
+#include "blockCommand.hpp"
 #include "../link_defines.h"
 
 #include <string.h>
@@ -26,11 +26,11 @@ static uint16_t g_blockCommandContent[8] = {LINKCMD_CONT_BLOCK, 0x00, 0x00, 0x00
  * @return true Chunking is done
  * @return false More Chunking to do
  */
-bool blockCommandChunk()
+CommandState blockCommandChunk()
 {
-    if (g_blockMaxSize == 0) return true;
+    if (g_blockMaxSize == 0) return CommandState::done;
 
-    if (!g_initSend) return false;
+    if (!g_initSend) return CommandState::resume;
 
     memset((uint8_t*)g_blockCommandContent + 2, 0x00, MAX_CHUNK);
 
@@ -45,7 +45,7 @@ bool blockCommandChunk()
     g_srcSize -= chunkSize;
     g_blockMaxSize -= maxChunkSize;
     g_pos += chunkSize;
-    return (g_blockMaxSize == 0);
+    return CommandState::resume;
 }
 
 void blockCommandSetup(const void* src, uint16_t size, uint16_t blockMaxSize)
@@ -59,11 +59,10 @@ void blockCommandSetup(const void* src, uint16_t size, uint16_t blockMaxSize)
     g_blockCommandInit[BLOCK_SIZE_INDEX] = blockMaxSize;
 }
 
-uint16_t blockCommand_cb()
+uint16_t blockCommandTransive()
 {
     uint16_t ret = g_initSend ? g_blockCommandContent[g_index] : g_blockCommandInit[g_index];
     
-
     g_index++;
     if (g_index == 8)
     {
@@ -74,3 +73,14 @@ uint16_t blockCommand_cb()
     return ret;
 }
 
+TransiveStruct blockCommand() 
+{
+    static TransiveStruct transive
+    {
+        .init = nullptr,
+        .transive = blockCommandTransive,
+        .transiveDone = blockCommandChunk
+    };
+
+    return transive;
+}

@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.20.0)
 
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 # The following resolves the Zephyr location using the ZEPHYR_BASE environment variable.
 # The `REQUIRED HINTS $ENV{ZEPHYR_BASE}` is optional in case you're not using `west zephyr-export`
 # https://docs.zephyrproject.org/latest/develop/west/zephyr-cmds.html#installing-cmake-packages-west-zephyr-export
@@ -20,12 +23,13 @@ project(
 target_sources(
     app
     PRIVATE
-    src/main.c
+    src/main.cpp
 )
 
 set_compiler_property(PROPERTY diagnostic -fdiagnostics-color=never)
 
 
-add_subdirectory(src/link)
+add_subdirectory(src/layers)
 add_subdirectory(src/callbacks)
 add_subdirectory(src/payloads)
+add_subdirectory(src/sections)

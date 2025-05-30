@@ -11,7 +11,7 @@
 #include "stm32f0xx_ll_bus.h"
 #include "stm32f0xx_ll_dma.h"
 
-#include "link.h"
+#include "linkLayer.h"
 
 #define ARR_VALUE 416
 #define GPIO_PIN_DEBUG 1
@@ -24,11 +24,13 @@
 #define DMA_CHANNEL_TX 5
 
 static struct gpio_callback g_link_start_rx_uart_callback;
-static struct gpio_callback g_link_start_tx_uart_callback;
 
 void (*g_handler)(void);
+
+void* g_transiveUserdata = NULL;
 static TransiveHandler g_transiveCallback = NULL;
 
+void* g_transiveDoneUserdata = NULL;
 static TransiveDoneHandler g_transiveDoneCallback = NULL;
 
 const struct device* gpioIO = DEVICE_DT_GET(DT_NODELABEL(gpioa));
@@ -101,10 +103,10 @@ static void dma_complete_dummy(const struct device *dev, void *user_data, uint32
     int lock = irq_lock();
 
     //gpio_pin_toggle(gpioIO, GPIO_PIN_DEBUG);
-    (*(volatile uint32_t *)(0x48000000 | 0x18)) = (1 << (GPIO_PIN_DEBUG + 16));
+    //(*(volatile uint32_t *)(0x48000000 | 0x18)) = (1 << (GPIO_PIN_DEBUG + 16));
 
     link_dmaToReceived();
-    g_link_transmit = g_transiveCallback(g_link_received);
+    g_link_transmit = g_transiveCallback(g_link_received, g_transiveUserdata);
     link_transmitToDma();
 
     //gpio_pin_configure(gpioIO, GPIO_PIN_DATA_INPUT_OUTPUT, GPIO_OUTPUT_HIGH);
@@ -116,7 +118,7 @@ static void dma_complete_dummy(const struct device *dev, void *user_data, uint32
     LL_TIM_EnableCounter(TIM15);
 
     //gpio_pin_toggle(gpioIO, GPIO_PIN_DEBUG);
-    (*(volatile uint32_t *)(0x48000000 | 0x18)) = (1 << GPIO_PIN_DEBUG);
+    //(*(volatile uint32_t *)(0x48000000 | 0x18)) = (1 << GPIO_PIN_DEBUG);
 
     irq_unlock(lock);
 }
@@ -165,12 +167,15 @@ static struct dma_config dma_cfg_rx = {
     .head_block = &rx_config
 };
 
-void link_setTransiveCallback(TransiveHandler cb, void* user_data) {
+void link_setTransiveCallback(TransiveHandler cb, void* user_data) 
+{
+    g_transiveUserdata = user_data;
     g_transiveCallback = cb;
 }
 
 void link_setTransiveDoneCallback(TransiveDoneHandler cb, void* user_data)
 {
+    g_transiveDoneUserdata = user_data;
     g_transiveDoneCallback = cb;
 }
 
@@ -184,7 +189,7 @@ static void link_transiveDone()
     LL_TIM_DisableCounter(TIM3);
     LL_TIM_SetCounter(TIM3, 0);
 
-    if (g_transiveDoneCallback != NULL) g_transiveDoneCallback();
+    if (g_transiveDoneCallback != NULL) g_transiveDoneCallback(g_transiveDoneUserdata);
 
     // Prepare state for next recive
     gpio_pin_configure(gpioIO, GPIO_PIN_DATA_INPUT_OUTPUT, GPIO_INPUT | GPIO_PULL_UP);

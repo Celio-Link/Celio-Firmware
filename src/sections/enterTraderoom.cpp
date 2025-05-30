@@ -1,34 +1,64 @@
 #include "enterTraderoom.hpp"
 
-ConnectionStatus EnterTraderoom::process(std::span<const uint8_t> command)
+extern "C"
 {
-    switch(command[CMD_INDEX])
+    #include "../payloads/linkPlayer.h"
+    #include "../payloads/trainerCard.h"    
+}
+
+#include "../callbacks/commands.hpp"
+
+#include <zephyr/drivers/gpio.h>
+
+#include <algorithm>
+
+void EnterTradeRoom::process()
+{
+    while(true)
     {
-        case LINKCMD_READY_CLOSE_LINK:
-            return ConnectionStatus::closed;
-        
-        case LINKCMD_SEND_LINK_TYPE:
-            if (command[1] == LINKTYPE_TRADE_SETUP)
+        auto command = m_packetLayer.getCommand();
+        switch(command[0])
+        {
+            case LINKCMD_INIT_BLOCK:
             {
-                const struct LinkPlayerBlock* linkPlayerBlock = linkPLayer();
-                blockCommandSetup(linkPlayerBlock, sizeof(*linkPlayerBlock), sizeof(*linkPlayerBlock));
-                g_transmitHandler = blockCommand_cb;
+                gpio_pin_toggle(DEVICE_DT_GET(DT_NODELABEL(gpioa)), 1);
+                gpio_pin_toggle(DEVICE_DT_GET(DT_NODELABEL(gpioa)), 1);
+                auto transive = blockCommand();
+
+                switch(m_blockState)
+                {
+                    case BlockCommandState::LinkPlayer:
+                    {
+                        const struct LinkPlayerBlock* linkPlayerBlock = linkPLayer();
+                        blockCommandSetup(linkPlayerBlock, sizeof(*linkPlayerBlock), sizeof(*linkPlayerBlock));
+                        m_blockState = BlockCommandState::TrainerCard;
+                        break;
+                    }
+                    
+                    case BlockCommandState::TrainerCard:
+                    {
+                        const struct TrainerCard* trainerCard = trainerCardPlaceholder();
+                        blockCommandSetup(trainerCard, sizeof(*trainerCard), 0x64);
+                        break;
+                    }
+                }
+                m_packetLayer.setTransiveHandler(transive);
+                break;
             }
-            break;
-    
-        case LINKCMD_SEND_BLOCK_REQ:
-            const struct TrainerCard* trainerCard = trainerCardPlaceholder();
-            blockCommandSetup(trainerCard, sizeof(*trainerCard), 0x64);
-            g_transmitHandler = blockCommand_cb;
-            break;
-        
-        case LINKCMD_READY_EXIT_STANDBY:
-            g_transmitHandler = readyExitStandbyCommand_cb;
-            break;
-        
-        case LINKCMD_SEND_HELD_KEYS:
-            g_transmitHandler = moveCommand_cb;
-            break;
+            
+            case LINKCMD_READY_EXIT_STANDBY:
+                m_packetLayer.setTransiveHandler(readyExitStandbyCommand());
+                break;
+            
+            case LINKCMD_SEND_HELD_KEYS:
+                m_packetLayer.setTransiveHandler(moveCommand());
+                break;
+            
+            case LINKCMD_READY_CLOSE_LINK:
+                m_packetLayer.reset();
+                return;
+            
+            default: break;
+        }
     }
-    return ConnectionStatus::open;
 }

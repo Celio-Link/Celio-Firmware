@@ -1,0 +1,5 @@
+#include "./blockCommand.hpp"
+#include "./emptyCommand.hpp"
+#include "./moveCommand.hpp"
+#include "./blockRequestCommand.hpp"
+#include "./readyExitStandbyCommand.hpp"
