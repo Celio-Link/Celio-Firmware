@@ -1,6 +1,6 @@
 #include "linkPlayer.hpp"
 
-static const struct LinkPlayerBlock g_linkPlayer = 
+static struct LinkPlayerBlock g_linkPlayer = 
 {
     .magic1 = "GameFreak inc.",
     .linkPlayer = 
@@ -21,7 +21,8 @@ static const struct LinkPlayerBlock g_linkPlayer =
     .magic2 = "GameFreak inc."
 };
 
-const struct LinkPlayerBlock* linkPLayer()
+const struct LinkPlayerBlock* linkPLayer(uint32_t linkType)
 {
+    g_linkPlayer.linkPlayer.linkType = linkType;
     return &g_linkPlayer;
 }

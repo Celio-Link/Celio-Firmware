@@ -30,7 +30,7 @@ void TradeSetup::process()
                 {
                     case BlockCommandState::LinkPlayer:
                     {
-                        const struct LinkPlayerBlock* linkPlayerBlock = linkPLayer();
+                        const struct LinkPlayerBlock* linkPlayerBlock = linkPLayer(LINKTYPE_TRADE_SETUP);
                         blockCommandSetup(linkPlayerBlock, sizeof(*linkPlayerBlock), sizeof(*linkPlayerBlock));
                         m_blockState = BlockCommandState::TrainerCard;
                         break;
@@ -54,11 +54,8 @@ void TradeSetup::process()
             case LINKCMD_SEND_HELD_KEYS:
             {
                 if (!m_packetLayer.idle()) break;
-                
-                gpio_pin_toggle(DEVICE_DT_GET(DT_NODELABEL(gpioa)), 1);
-                gpio_pin_toggle(DEVICE_DT_GET(DT_NODELABEL(gpioa)), 1);
 
-                if (m_movementData[m_movementDataIndex] == LINK_KEY_CODE_READY) break;
+                if (m_movementDataIndex >= m_movementData.size()) break;
                 
                 moveCommandInit(m_movementData[m_movementDataIndex]);
                 m_packetLayer.setTransiveHandler(moveCommand());
@@ -67,7 +64,7 @@ void TradeSetup::process()
             }
             
             case LINKCMD_READY_CLOSE_LINK:
-                m_packetLayer.reset();
+                m_packetLayer.setTransiveHandler(readyCloseLinkCommand());
                 return;
             
             default: break;

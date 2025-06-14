@@ -32,6 +32,7 @@
 #define LINKCMD_PARTNER_CANCEL_TRADE    0xEECC
 #define LINKCMD_NONE                    0xEFFF
 
+#define LINKCMD_EMPTY                   0x0000
 
 #define LINKTYPE_TRADE               0x1111
 #define LINKTYPE_TRADE_CONNECTING    0x1122

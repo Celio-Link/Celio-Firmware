@@ -15,6 +15,10 @@ public:
 
 private:
 
+    void handleInitialDataExchange();
+
+    void handleTradeNegotiations();
+    
     enum class TradeConnectionState : uint8_t
     {
         LinkPlayer = 0x00,
@@ -22,11 +26,14 @@ private:
         PartyPart1 = 0x02,
         PartyPart2 = 0x03,
         Mail = 0x04,
-        Ribbons = 0x05
+        Ribbons = 0x05,
+        LinkCMD = 0x06
     };
 
     TradeConnectionState m_blockState = TradeConnectionState::LinkPlayer;
     PacketLayer& m_packetLayer;
     struct k_sem m_commandSemaphore;
     std::array<uint16_t, 8> m_currentCommand;
+
+    size_t m_emptyCounter = 0;
 };

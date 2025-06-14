@@ -49,7 +49,16 @@ public:
         return std::span(m_receivedCommand); 
     }
 
-    void reset() { m_state = TransiveState::handshake; }
+    void reset() 
+    { 
+        m_state = TransiveState::handshake;
+        m_idle = true;
+        m_commandSendFinished = false;
+        m_crcSendFinished = false;
+        m_commandIndex = 0;
+        m_transiveCounter = 0;
+        m_handler = emptyCommand();
+    }
 
     bool idle() { return m_idle; }
 

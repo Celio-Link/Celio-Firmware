@@ -20,12 +20,7 @@ static uint16_t g_blockCommandInit[8] = {
 
 static uint16_t g_blockCommandContent[8] = {LINKCMD_CONT_BLOCK, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
-/**
- * @brief Chunks the block into parts for the callback to send
- * 
- * @return true Chunking is done
- * @return false More Chunking to do
- */
+
 CommandState blockCommandChunk()
 {
     if (g_blockMaxSize == 0) return CommandState::done;

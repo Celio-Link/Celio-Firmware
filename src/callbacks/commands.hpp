@@ -3,3 +3,4 @@
 #include "./moveCommand.hpp"
 #include "./blockRequestCommand.hpp"
 #include "./readyExitStandbyCommand.hpp"
+#include "./readyCloseLinkCommand.hpp"

@@ -23,4 +23,6 @@ struct LinkPlayerBlock
     char magic2[16];
 };
 
-const struct LinkPlayerBlock* linkPLayer();
+const struct LinkPlayerBlock* linkPLayer(uint32_t linkype);
+
+const struct LinkPlayerBlock* corruptedLinkPLayer();
