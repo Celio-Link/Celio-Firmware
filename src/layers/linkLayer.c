@@ -42,7 +42,7 @@ static enum LinkMode g_mode = SLAVE;
 static struct gpio_callback g_linkStartReceiveSlaveCallback;
 static struct gpio_callback g_linkStartReceiveMasterCallback;
 
-const struct device* gpioIO = DEVICE_DT_GET(DT_NODELABEL(gpioa));
+const struct device* gpioIO = DEVICE_DT_GET(DT_NODELABEL(gpiob));
 const struct device* dma = DEVICE_DT_GET(DT_NODELABEL(dma1));
 
 static uint32_t tx_data[18] = {};
@@ -106,7 +106,7 @@ static void dmaCompleteTransmit(const struct device *dev, void *user_data, uint3
 static void dmaCompleteReceive(const struct device *dev, void *user_data, uint32_t channel, int status);
 
 static struct dma_block_config tx_config = {
-    .dest_address = (uint32_t)(0x48000000 | 0x18), // GPIOA->BSRR
+    .dest_address = (uint32_t)(0x48000400 | 0x18), // GPIOA->BSRR
     .source_address = (uint32_t)tx_data,
     .block_size = sizeof(tx_data),
     .source_addr_adj = DMA_ADDR_ADJ_INCREMENT,
@@ -129,7 +129,7 @@ static struct dma_config dma_cfg_tx = {
 
 static struct dma_block_config rx_config = {
     .dest_address = (uint32_t)rx_data,
-    .source_address = (uint32_t) (0x48000000 | 0x10), // GPIOA->IDR
+    .source_address = (uint32_t) (0x48000400 | 0x10), // GPIOA->IDR
     .block_size = sizeof(rx_data),
     .source_addr_adj = DMA_ADDR_ADJ_NO_CHANGE,
     .dest_addr_adj = DMA_ADDR_ADJ_INCREMENT
@@ -339,8 +339,6 @@ void link_changeMode(enum LinkMode mode)
 
             gpio_pin_interrupt_configure(gpioIO, GPIO_PIN_LEADER_START, GPIO_INT_DISABLE);
             gpio_pin_interrupt_configure(gpioIO, GPIO_PIN_DATA_INPUT_OUTPUT, GPIO_INT_DISABLE);
-
-            //setUpVBlankTimer();
             break;
     }
 
