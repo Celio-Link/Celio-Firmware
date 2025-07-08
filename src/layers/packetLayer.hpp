@@ -59,6 +59,12 @@ public:
 
     bool idle() { return m_idle; }
 
+    void enableHandshake() { m_transmitHandShake = LINK_SLAVE_HANDSHAKE; }
+
+    void disableHandshake() { m_transmitHandShake = 0x00; }
+
+    bool gbaHasSendHandShake() { m_receivedHandshake == LINK_SLAVE_HANDSHAKE; }
+
     void reset();
 
     void setMode(Mode mode) 
