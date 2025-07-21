@@ -26,6 +26,12 @@ target_sources(
     src/main.cpp
 )
 
+target_sources(
+    app
+    PRIVATE
+    src/control.cpp
+)
+
 set_compiler_property(PROPERTY diagnostic -fdiagnostics-color=never)
 
 
@@ -33,3 +39,4 @@ add_subdirectory(src/layers)
 add_subdirectory(src/callbacks)
 add_subdirectory(src/payloads)
 add_subdirectory(src/sections)
+add_subdirectory(src/module)

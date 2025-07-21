@@ -8,6 +8,7 @@
 
 namespace
 {
+    bool g_enabled = false;
     //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
     /* random GUID {FA611CC3-7057-42EE-9D82-4919639562B3} */
@@ -357,10 +358,24 @@ namespace
 
     //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
+    static void usbStatusCallback(struct usb_cfg_data *cfg,
+				 enum usb_dc_status_code status,
+				 const uint8_t *param)
+    {
+        ARG_UNUSED(param);
+        ARG_UNUSED(cfg);
+        if (g_enabled)
+        {
+            UsbLayer::getInstance().setStatus(status);
+        }
+    }
+
+    //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
+
     USBD_DEFINE_CFG_DATA(m_usbConfig) = {
         .usb_device_description = NULL,
         .interface_descriptor = &m_usbServiceDescriptor.if0,
-        .cb_usb_status = nullptr,
+        .cb_usb_status = usbStatusCallback,
         .interface = {
             .class_handler = NULL,
             .vendor_handler = vendorRequestHandler,
@@ -370,7 +385,7 @@ namespace
         .endpoint = m_webUsbEndpointConfig
     };
 
-    //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//s
+    //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
     static int usb_init()
     {
@@ -379,8 +394,9 @@ namespace
 	    usb_bos_register_cap((void *)&bos_cap_lpm);
 
         int ret = usb_enable(NULL);
+        if (ret == 0) g_enabled = true;
         return ret;
     }
 }
 
-SYS_INIT(usb_init, APPLICATION, 2);
+SYS_INIT(usb_init, POST_KERNEL, 2);

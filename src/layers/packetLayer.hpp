@@ -63,7 +63,9 @@ public:
 
     void disableHandshake() { m_transmitHandShake = 0x00; }
 
-    bool gbaHasSendHandShake() { return m_receivedHandshake == LINK_SLAVE_HANDSHAKE; }
+    bool hasSendHandShake() { return m_receivedHandshake == LINK_SLAVE_HANDSHAKE; }
+
+    bool isGameboyConnected();
 
     void reset();
 

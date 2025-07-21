@@ -7,3 +7,4 @@
 #include "./sendLinkTypeCommand.hpp"
 #include "./blockCommandRequestCommand.hpp"
 #include "./sendDummyCommand.hpp"
+#include "./usbLinkCommand.hpp"

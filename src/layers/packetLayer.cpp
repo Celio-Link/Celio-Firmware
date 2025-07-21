@@ -50,5 +50,20 @@ void PacketLayer::reset()
     m_crc = LINK_SLAVE_HANDSHAKE;
     m_handler = emptyCommand();
     m_masterClock.disableSync();
-    //setMode(Mode::slave);
+}
+
+bool PacketLayer::isGameboyConnected()
+{
+    disableHandshake();
+    m_state = TransiveState::handshake;
+    setMode(PacketLayer::Mode::master);
+    k_busy_wait(50000);
+    bool connectionCheck = (
+        (m_receivedHandshake == 0xFFFC) ||
+        (m_receivedHandshake == 0xFFFE) ||
+        (m_receivedHandshake == LINK_SLAVE_HANDSHAKE)
+    );
+
+    reset();
+    return connectionCheck;
 }

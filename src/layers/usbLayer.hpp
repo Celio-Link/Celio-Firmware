@@ -32,16 +32,25 @@ public:
     UsbLayer(UsbLayer&&) = delete;
     UsbLayer& operator=(UsbLayer&&) = delete;
 
-    void sendStatus(std::span<const uint8_t> data)
+    bool sendStatus(std::span<const uint8_t> data)
     {
+        if (!m_endpointsEnabled) return false;
         std::ranges::copy(data, m_sendData.begin());
-        usb_transfer(statusInEndpoint, m_sendData.data(), data.size(), USB_TRANS_WRITE, m_usbWriteCallback, this);
+        return usb_transfer(statusInEndpoint, m_sendData.data(), data.size(), USB_TRANS_WRITE, m_usbWriteCallback, this) != 0;
     }
 
-    void sendData(std::span<const uint8_t> data) 
+    bool sendStatus(std::initializer_list<uint8_t> data)
     {
+        if (!m_endpointsEnabled) return false;
         std::ranges::copy(data, m_sendData.begin());
-        usb_transfer(dataInEndpoint, m_sendData.data(), data.size(), USB_TRANS_WRITE, m_usbWriteCallback, this);
+        return usb_transfer(statusInEndpoint, m_sendData.data(), data.size(), USB_TRANS_WRITE, m_usbWriteCallback, this) != 0;
+    }
+
+    bool sendData(std::span<const uint8_t> data) 
+    {
+        if (!m_endpointsEnabled) return false;
+        std::ranges::copy(data, m_sendData.begin());
+        return usb_transfer(dataInEndpoint, m_sendData.data(), data.size(), USB_TRANS_WRITE, m_usbWriteCallback, this) != 0;
     }
 
     void setReceiveCommandHandler(const UsbReceiveHandler& handler, void* userData)
@@ -58,7 +67,35 @@ public:
 
     static constexpr uint16_t endpointSize() { return m_endpointSize; }
 
+    void setStatus(enum usb_dc_status_code status)
+    {
+        switch (status) 
+        {
+        case USB_DC_CONFIGURED:
+            m_endpointsEnabled = true;
+            break;
+        case USB_DC_ERROR: 
+            [[fallthrough]];
+        case USB_DC_DISCONNECTED: 
+            [[fallthrough]];
+        case USB_DC_RESET: 
+            [[fallthrough]];
+        case USB_DC_UNKNOWN:
+            m_endpointsEnabled = false;
+            break;
+
+        case USB_DC_CONNECTED:
+        case USB_DC_SUSPEND:
+        case USB_DC_RESUME:
+            break;
+        default:
+            break;
+        }
+    }
+
 private:
+    bool m_endpointsEnabled = false;
+
     struct ReceiveDelegate
     {
         void* userData;
@@ -93,6 +130,7 @@ private:
         .endpoint = commandOutEndpoint,
         .layer = this
     };
+
     ReceiveDelegate m_receiveDataCommandHandler = {
         .userData = nullptr,
         .handler = nullptr,
