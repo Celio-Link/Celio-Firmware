@@ -12,13 +12,16 @@ extern "C"
 
 #include <algorithm>
 
-void TradeSetup::process()
+NextSection TradeSetup::process()
 {
     m_packetLayer.setTransiveHandler(sendLinkTypeCommand(m_linkType));
+    NextSection nextSection = NextSection::connection;
 
-    while(true)
+    while (true)
     {
         auto command = m_packetLayer.getCommand();
+
+        NVIC_EnableIRQ(USB_IRQn);
         
         if (m_blockState == BlockCommandState::RequestTrainerCard && m_packetLayer.idle())
         {
@@ -26,8 +29,6 @@ void TradeSetup::process()
             m_blockState = BlockCommandState::TrainerCard;
             continue;
         }
-        
-        if (command[0] != 0x00) UsbLayer::getInstance().sendData(std::span(reinterpret_cast<const uint8_t*>(command.data()), 16));
         
         switch(command[0])
         {
@@ -53,7 +54,7 @@ void TradeSetup::process()
                         break;
                     }
                     default: continue;
-                }
+                } 
                 m_packetLayer.setTransiveHandler(transive);
                 break;
             }
@@ -64,6 +65,8 @@ void TradeSetup::process()
             
             case LINKCMD_SEND_HELD_KEYS:
             {
+                if (command[1] == LINK_KEY_CODE_EXIT_ROOM) nextSection = NextSection::exit; //send exit code
+
                 if (!m_packetLayer.idle()) break;
 
                 if (m_movementDataIndex >= m_movementData.size()) break;
@@ -78,10 +81,12 @@ void TradeSetup::process()
                 m_packetLayer.setTransiveHandler(readyCloseLinkCommand());
                 k_sleep(K_MSEC(40));
                 m_packetLayer.reset(); //master
-                k_sleep(K_MSEC(200));
-                return;
+                k_sleep(K_MSEC(400));
+                return nextSection;
             
             default: break;
         }
+        k_sleep(K_MSEC(5));
+        NVIC_DisableIRQ(USB_IRQn);
     }
 }

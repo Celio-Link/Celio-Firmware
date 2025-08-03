@@ -4,6 +4,8 @@
 #include "../payloads/pokemon.hpp"
 #include "../payloads/mail.hpp"
 
+#include "nextSectionState.hpp"
+
 extern "C"
 {
     #include "../payloads/linkPlayer.h"
@@ -27,7 +29,7 @@ class TradeConnection
 public:
     TradeConnection(PacketLayer& layer) : m_packetLayer(layer)
     {
-        m_packetLayer.setMode(PacketLayer::Mode::master);
+        //m_packetLayer.setMode(PacketLayer::Mode::master);
         k_timer_init(&m_commandRequestTimer, requestBlockCommand, NULL);
         k_timer_user_data_set(&m_commandRequestTimer, this);
     }
@@ -37,13 +39,15 @@ public:
         while(!m_packetLayer.idle()) {};
     }
 
-    void process();
+    NextSection process();
 
 private:
 
     void handleInitialDataExchange();
 
-    void handleTradeNegotiations();
+    NextSection handleTradeNegotiations();
+
+    void sendLinkCommand(uint16_t cmd, uint16_t arg = 0x00);
     
     enum class TradeConnectionState : uint8_t
     {
@@ -65,6 +69,7 @@ private:
 
     size_t m_emptyCounter = 0;
     bool m_requestBlock = false;
+    uint8_t m_requestBlockSize = 2;
 
     static void requestBlockCommand(struct k_timer *timer)
     {

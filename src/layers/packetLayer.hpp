@@ -46,7 +46,6 @@ public:
 
     void setTransiveHandler(struct TransiveStruct handler)
     {
-        if (!m_idle) return; 
         m_handler = handler;
         m_idle = false;
         if (handler.init != nullptr) handler.init(handler.userData);

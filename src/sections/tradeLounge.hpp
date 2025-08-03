@@ -7,7 +7,7 @@
 
 #pragma once
 
-class TradeSetup
+class TradeLounge
 {
 
     enum class BlockCommandState : uint8_t
@@ -18,12 +18,12 @@ class TradeSetup
     };
 
 public:
-    TradeSetup(PacketLayer& layer, uint16_t linkType) : m_packetLayer(layer), m_linkType(linkType)
+    TradeLounge(PacketLayer& layer) : m_packetLayer(layer)
     {
         //m_packetLayer.setMode(PacketLayer::Mode::master);
     }
 
-    ~TradeSetup()
+    ~TradeLounge()
     {
         while(!m_packetLayer.idle()) {};
     }
@@ -35,7 +35,6 @@ private:
     BlockCommandState m_blockState = BlockCommandState::LinkPlayer;
     PacketLayer& m_packetLayer;
     struct k_sem m_commandSemaphore;
-    uint16_t m_linkType;
     std::array<uint16_t, 8> m_currentCommand;
 
     size_t m_movementDataIndex = 0;

@@ -2,6 +2,8 @@
 
 #include "../layers/packetLayer.hpp"
 
+#include "nextSectionState.hpp"
+
 #pragma once
 
 class TradeDisconnect
@@ -9,17 +11,18 @@ class TradeDisconnect
     enum class BlockCommandState : uint8_t
     {
         None = 0x00,
-        LinkPlayer = 0x01
+        LinkPlayer = 0x01,
+        FinishTrade = 0x02
     };
 
     void exchangeTrainerData();
 
-    void handleDisconnect();
+    NextSection handleDisconnect();
 
 public:
     TradeDisconnect(PacketLayer& layer) : m_packetLayer(layer)
     {
-        m_packetLayer.setMode(PacketLayer::Mode::slave);
+        //m_packetLayer.setMode(PacketLayer::Mode::slave);
     }
 
     ~TradeDisconnect()
@@ -27,7 +30,7 @@ public:
         while(!m_packetLayer.idle()) {};
     }
 
-    void process();
+    NextSection process();
 
 private:
     PacketLayer& m_packetLayer;

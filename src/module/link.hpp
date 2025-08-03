@@ -27,6 +27,8 @@ public:
 private:
     void establishConncection();
 
+    void reestablishConnection();
+
     PacketLayer& m_packetLayer;
 
     struct k_event m_connectEvent;

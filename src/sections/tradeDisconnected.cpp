@@ -12,46 +12,54 @@ extern "C"
 
 void TradeDisconnect::exchangeTrainerData()
 {
+    m_packetLayer.setTransiveHandler(sendLinkTypeCommand(LINKTYPE_TRADE_DISCONNECTED));
+
     while(true)
     {
         auto command = m_packetLayer.getCommand();
-        switch(command[0])
+
+        NVIC_EnableIRQ(USB_IRQn);
+
+        if ((command[0] == LINKCMD_INIT_BLOCK) && (m_blockState == BlockCommandState::None))
         {
-            case LINKCMD_INIT_BLOCK:
-            {
-                auto transive = blockCommand();
-
-                switch(m_blockState)
-                {
-                    case BlockCommandState::None:
-                    {
-                        const struct LinkPlayerBlock* linkPlayerBlock = linkPLayer(LINKTYPE_TRADE_DISCONNECTED);
-                        blockCommandSetup(linkPlayerBlock, sizeof(*linkPlayerBlock), sizeof(*linkPlayerBlock));
-                        m_packetLayer.setTransiveHandler(blockCommand());
-                        m_blockState = BlockCommandState::LinkPlayer;
-                        break;
-                    }
-                    default: break;
-                }
-                break;
-            }
-
-            default:
-            {
-                if (m_blockState == BlockCommandState::LinkPlayer && m_packetLayer.idle())
-                {
-                    return;
-                }
-            }
+            
+            const struct LinkPlayerBlock* linkPlayerBlock = linkPLayer(LINKTYPE_TRADE_DISCONNECTED);
+            blockCommandSetup(linkPlayerBlock, sizeof(*linkPlayerBlock), sizeof(*linkPlayerBlock));
+            m_packetLayer.setTransiveHandler(blockCommand());
+            m_blockState = BlockCommandState::LinkPlayer;        
         }
+
+        if (m_blockState == BlockCommandState::LinkPlayer && m_packetLayer.idle())
+        {
+            NVIC_DisableIRQ(USB_IRQn);
+            return;
+        }
+
+        k_sleep(K_MSEC(5));
+        NVIC_DisableIRQ(USB_IRQn);
     }
 }
 
-void TradeDisconnect::handleDisconnect()
+NextSection TradeDisconnect::handleDisconnect()
 {
     while(true)
     {
         auto command = m_packetLayer.getCommand();
+
+        NVIC_EnableIRQ(USB_IRQn);
+
+        if (m_blockState == BlockCommandState::FinishTrade)
+        {
+            std::array<uint16_t, 2> command = {LINKCMD_CONFIRM_FINISH_TRADE};
+            blockCommandSetup(command.data(), command.size(), 20);
+            m_packetLayer.setTransiveHandler(blockCommand());
+
+            m_blockState = BlockCommandState::None;
+
+            k_sleep(K_MSEC(5));
+            NVIC_DisableIRQ(USB_IRQn);
+            continue;
+        }
 
         switch (command[0])
         {
@@ -59,40 +67,37 @@ void TradeDisconnect::handleDisconnect()
                 m_packetLayer.setTransiveHandler(readyExitStandbyCommand());
                 break;
             
-            case LINKCMD_READY_CLOSE_LINK:
-                m_packetLayer.setTransiveHandler(readyCloseLinkCommand());
-                break;
-
             case LINKCMD_CONT_BLOCK:
             {
-                switch (command[1])
+                if (command[1] == LINKCMD_READY_FINISH_TRADE)
                 {
-                    case LINKCMD_READY_FINISH_TRADE:
-                    {
-                        std::array<uint16_t, 2> command = {LINKCMD_READY_FINISH_TRADE};
-                        blockCommandSetup(command.data(), command.size(), 20);
-                        m_packetLayer.setTransiveHandler(blockCommand());
-                        break;
-                    }
-                        
-                    case LINKCMD_CONFIRM_FINISH_TRADE:
-                    {
-                        std::array<uint16_t, 2> command = {LINKCMD_CONFIRM_FINISH_TRADE};
-                        blockCommandSetup(command.data(), command.size(), 20);
-                        m_packetLayer.setTransiveHandler(blockCommand());
-                        break;
-                    }
+                    std::array<uint16_t, 2> command = {LINKCMD_READY_FINISH_TRADE};
+                    blockCommandSetup(command.data(), command.size(), 20);
+                    m_packetLayer.setTransiveHandler(blockCommand());
+                    m_blockState = BlockCommandState::FinishTrade;
                     
-                    default: break;
                 }
+                break;
+            }
+
+            case LINKCMD_READY_CLOSE_LINK:
+            {
+                m_packetLayer.setTransiveHandler(readyCloseLinkCommand());
+                k_sleep(K_MSEC(40));
+                m_packetLayer.reset();
+                k_sleep(K_MSEC(400));
+                return NextSection::connection;
             }
         }
+
+        k_sleep(K_MSEC(5));
+        NVIC_DisableIRQ(USB_IRQn);
     }
 }
 
 
-void TradeDisconnect::process()
+NextSection TradeDisconnect::process()
 {
     exchangeTrainerData();
-    handleDisconnect();   
+    return handleDisconnect();   
 }

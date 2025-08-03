@@ -15,16 +15,21 @@ extern "C"
 void TradeConnection::handleInitialDataExchange()
 {
    
-    m_packetLayer.setTransiveHandler(sendLinkTypeCommand(LINKTYPE_BATTLE));
+    m_packetLayer.setTransiveHandler(sendLinkTypeCommand(LINKTYPE_TRADE_CONNECTING));
 
     while (true)
     {
         auto command = m_packetLayer.getCommand();
 
+        NVIC_EnableIRQ(USB_IRQn);
+
         if (m_requestBlock)
         {
             m_requestBlock = false;
-            m_packetLayer.setTransiveHandler(sendBlockCommandRequestCommand(2));
+            m_packetLayer.setTransiveHandler(sendBlockCommandRequestCommand(m_requestBlockSize));
+
+            k_sleep(K_MSEC(5));
+            NVIC_DisableIRQ(USB_IRQn);
             continue;
         }
 
@@ -39,54 +44,60 @@ void TradeConnection::handleInitialDataExchange()
                 {
                     case TradeConnectionState::LinkPlayer:
                     {
-                        const struct LinkPlayerBlock* linkPlayerBlock = corruptedLinkPLayer(LINKTYPE_BATTLE);
+                        const struct LinkPlayerBlock* linkPlayerBlock = linkPLayer(LINKTYPE_TRADE_CONNECTING);
                         blockCommandSetup(linkPlayerBlock, sizeof(*linkPlayerBlock), sizeof(*linkPlayerBlock));
                         m_blockState = TradeConnectionState::PartyPart0;
-                        k_timer_start(&m_commandRequestTimer, K_MSEC(1000), K_NO_WAIT);
+                        m_requestBlockSize = 1;
+                        k_timer_start(&m_commandRequestTimer, K_MSEC(2000), K_NO_WAIT);
                         break;
                     }
 
-                    // case TradeConnectionState::PartyPart0:
-                    // {
-                    //     const auto party = std::as_bytes(getParty().subspan<0, 2>());
-                    //     blockCommandSetup(party.data(), party.size(), 200);
-                    //     m_blockState = TradeConnectionState::PartyPart1;
-                    //     k_timer_start(&m_commandRequestTimer, K_MSEC(1000), K_NO_WAIT);
-                    //     break;
-                    // }
+                    case TradeConnectionState::PartyPart0:
+                    {
+                        const auto party = std::as_bytes(getParty().subspan<0, 2>());
+                        blockCommandSetup(party.data(), party.size(), 200);
+                        m_blockState = TradeConnectionState::PartyPart1;
+                        m_requestBlockSize = 1;
+                        k_timer_start(&m_commandRequestTimer, K_MSEC(2000), K_NO_WAIT);
+                        break;
+                    }
 
-                    // case TradeConnectionState::PartyPart1:
-                    // {
-                    //     const auto party = std::as_bytes(getParty().subspan<2, 2>());
-                    //     blockCommandSetup(party.data(), party.size(), 200);
-                    //     m_blockState = TradeConnectionState::PartyPart2;
-                    //     k_timer_start(&m_commandRequestTimer, K_MSEC(1000), K_NO_WAIT);
-                    //     break;
-                    // }
+                    case TradeConnectionState::PartyPart1:
+                    {
+                        const auto party = std::as_bytes(getParty().subspan<2, 2>());
+                        blockCommandSetup(party.data(), party.size(), 200);
+                        m_blockState = TradeConnectionState::PartyPart2;
+                        m_requestBlockSize = 1;
+                        k_timer_start(&m_commandRequestTimer, K_MSEC(2000), K_NO_WAIT);
+                        break;
+                    }
 
-                    // case TradeConnectionState::PartyPart2:
-                    // {
-                    //     const auto party = std::as_bytes(getParty().subspan<4, 2>());
-                    //     blockCommandSetup(party.data(), party.size(), 200);
-                    //     k_timer_start(&m_commandRequestTimer, K_MSEC(1000), K_NO_WAIT);
-                    //     break;
-                    // }
+                    case TradeConnectionState::PartyPart2:
+                    {
+                        const auto party = std::as_bytes(getParty().subspan<4, 2>());
+                        blockCommandSetup(party.data(), party.size(), 200);
+                        m_blockState = TradeConnectionState::Mail;
+                        m_requestBlockSize = 3;
+                        k_timer_start(&m_commandRequestTimer, K_MSEC(2000), K_NO_WAIT);
+                        break;
+                    }
                     
-                    // case TradeConnectionState::Mail:
-                    // {
-                    //     const auto mail = getEmptyMailPayload();
-                    //     blockCommandSetup(mail.data(), mail.size(), 220);
-                    //     m_blockState = TradeConnectionState::Ribbons;
-                    //     k_timer_start(&m_commandRequestTimer, K_MSEC(1000), K_NO_WAIT);
-                    //     break;
-                    // }
+                    case TradeConnectionState::Mail:
+                    {
+                        const auto mail = getEmptyMailPayload();
+                        blockCommandSetup(mail.data(), mail.size(), 220);
+                        m_blockState = TradeConnectionState::Ribbons;
+                        m_requestBlockSize = 4;
+                        k_timer_start(&m_commandRequestTimer, K_MSEC(2000), K_NO_WAIT);
+                        break;
+                    }
 
-                    // case TradeConnectionState::Ribbons:
-                    // {
-                    //     blockCommandSetup(nullptr, 0, 40); 
-                    //     m_blockState = TradeConnectionState::LinkCMD;
-                    //     break;
-                    // }
+                    case TradeConnectionState::Ribbons:
+                    {
+                        blockCommandSetup(nullptr, 0, 40); 
+                        m_blockState = TradeConnectionState::LinkCMD;
+                        break;
+                    }
 
                     default: break;
 
@@ -99,65 +110,106 @@ void TradeConnection::handleInitialDataExchange()
             {
                 if (m_blockState == TradeConnectionState::LinkCMD && m_packetLayer.idle())
                 {
+                    NVIC_DisableIRQ(USB_IRQn);
                     return;
                 }
             }
         }
+
+        k_sleep(K_MSEC(5));
+        NVIC_DisableIRQ(USB_IRQn);
     }
 }
 
-void TradeConnection::handleTradeNegotiations()
+NextSection TradeConnection::handleTradeNegotiations()
 {
-    std::array<uint16_t, 2> command = {LINKCMD_READY_TO_TRADE, 0x01}; //Hard Code second party member for now
-    blockCommandSetup(command.data(), command.size(), 20);
-    m_packetLayer.setTransiveHandler(blockCommand());
-    
+    NextSection nextSection = NextSection::disconnect;
+
+    bool followupCmd = false;
+    uint16_t cmd = 0x00;
+
     while(true)
     {
         auto command = m_packetLayer.getCommand();
 
-        if (command[0] == LINKCMD_READY_CLOSE_LINK)
+        NVIC_EnableIRQ(USB_IRQn);
+
+        if (followupCmd && m_packetLayer.idle())
         {
-            m_packetLayer.setTransiveHandler(readyCloseLinkCommand());
-            return;
+            followupCmd = false;
+            sendLinkCommand(cmd);
+            k_sleep(K_MSEC(5));
+            NVIC_DisableIRQ(USB_IRQn);
+            continue;
         }
 
-        if (command[0] != LINKCMD_CONT_BLOCK) continue;
-
-        switch (command[1])
+        switch (command[0])
         {
-            case LINKCMD_INIT_BLOCK: //Here INIT_BLOCK is used to signal that the Pokemon is valid, why they didn't use a new value, God knows why ¯\_(ツ)_/¯
+            case LINKCMD_CONT_BLOCK:
             {
-                std::array<uint16_t, 2> command = {LINKCMD_INIT_BLOCK, 0x00};
-                blockCommandSetup(command.data(), command.size(), 20);
-                m_packetLayer.setTransiveHandler(blockCommand());
+                switch (command[1])
+                {
+                    case LINKCMD_INIT_BLOCK: //WTF were they thinking?
+                    {
+                        sendLinkCommand(LINKCMD_INIT_BLOCK);
+                        followupCmd = true;
+                        cmd = LINKCMD_START_TRADE;
+                        break;
+                    }
+
+                    case LINKCMD_READY_TO_TRADE:
+                    {
+                        sendLinkCommand(LINKCMD_SET_MONS_TO_TRADE, command[1]);
+                        break;
+                    }
+
+                    case LINKCMD_REQUEST_CANCEL:
+                    {
+                        sendLinkCommand(LINKCMD_REQUEST_CANCEL);
+                        followupCmd = true;
+                        cmd = LINKCMD_BOTH_CANCEL_TRADE;
+
+                        nextSection = NextSection::lounge;
+                        break;
+                    }
+
+                    case LINKCMD_READY_CANCEL_TRADE:
+                    {
+                        sendLinkCommand(LINKCMD_INIT_BLOCK);
+                        followupCmd = true;
+                        cmd = LINKCMD_PLAYER_CANCEL_TRADE;
+                        break;
+                    }
+                }
                 break;
             }
-                
+
             case LINKCMD_READY_CLOSE_LINK:
+            {
                 m_packetLayer.setTransiveHandler(readyCloseLinkCommand());
-                return;
-            
-            default: break;
+                k_sleep(K_MSEC(40));
+                m_packetLayer.reset();
+                k_sleep(K_MSEC(400));
+                return nextSection;
+            }
         }
+
+        k_sleep(K_MSEC(5));
+        NVIC_DisableIRQ(USB_IRQn);
     }
 }
 
-void TradeConnection::process()
+NextSection TradeConnection::process()
 {
    handleInitialDataExchange();
-   handleTradeNegotiations();
+   return handleTradeNegotiations();
 }
 
-
-
-//         case LINKCMD_READY_TO_TRADE:
-//         case LINKCMD_READY_FINISH_TRADE:
-//         case LINKCMD_READY_CANCEL_TRADE:
-//         case LINKCMD_START_TRADE:
-//         case LINKCMD_CONFIRM_FINISH_TRADE:
-//         case LINKCMD_SET_MONS_TO_TRADE:
-//         case LINKCMD_PLAYER_CANCEL_TRADE:
-//         case LINKCMD_REQUEST_CANCEL:
-//         case LINKCMD_BOTH_CANCEL_TRADE:
-//         case LINKCMD_PARTNER_CANCEL_TRADE:
+void TradeConnection::sendLinkCommand(uint16_t cmd, uint16_t arg)
+{
+    static std::array<uint16_t, 2> command;
+    command[0] = cmd;
+    command[1] = arg;
+    blockCommandSetup(command.data(), command.size(), 20);
+    m_packetLayer.setTransiveHandler(blockCommand());
+}

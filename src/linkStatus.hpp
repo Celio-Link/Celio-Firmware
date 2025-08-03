@@ -13,6 +13,8 @@ enum class LinkStatus : uint16_t
     HandshakeFinished = 0xFF04,
 
     LinkConnected = 0xFF05,
+    LinkReconnecting = 0xFF06,
+    LinkClosed = 0xFF07,
 
     StatusDebug = 0xFFFF
 };

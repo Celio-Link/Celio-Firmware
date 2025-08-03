@@ -21,7 +21,10 @@ class Control
     static constexpr uint8_t callSetModeId = 0x01;
 
 public:
-    Control(PacketLayer& packetLayer) : m_packetLayer(packetLayer), m_linkModule(m_packetLayer)
+    Control(PacketLayer& packetLayer) : 
+        m_packetLayer(packetLayer), 
+        m_linkModule(m_packetLayer),
+        m_emuModule(m_packetLayer)
     {
         UsbLayer::getInstance().setReceiveCommandHandler(receiveCommandHandler, this);
 
@@ -39,6 +42,7 @@ public:
         switch (m_mode)
         {
             case Mode::tradeEmu:
+                m_emuModule.execute();
                 break;
             case Mode::onlineLink:
                 UsbLayer::getInstance().setReceiveDataHandler(usbLink_receiveHandler, nullptr);
