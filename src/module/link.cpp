@@ -20,10 +20,41 @@ void LinkModule::execute()
     m_packetLayer.setTransiveHandler(usbLinkCommand());
 
     bool keepAlive = true;
+
+    bool partnerReadyCloseLink = false;
+    bool readyCloseLink = false;
     
     while (true)
     {
         auto usbCommand = usbLink_loadTransivePacket();
+
+        if (partnerReadyCloseLink && readyCloseLink)
+        {   
+            NVIC_EnableIRQ(USB_IRQn);
+
+            if (keepAlive)
+            {
+                sendLinkStatus(LinkStatus::LinkReconnecting);
+                m_packetLayer.disableHandshake();
+                k_sleep(K_MSEC(40));
+                m_packetLayer.reset(); // disable sync
+                k_sleep(K_MSEC(200));
+                if (m_packetLayer.getMode() == PacketLayer::Mode::master)
+                {
+                    m_packetLayer.setMode(PacketLayer::Mode::master); // enable sync again
+                }
+                establishConncection();
+                partnerReadyCloseLink = false;
+                readyCloseLink = false;
+            }
+            else 
+            {
+                sendLinkStatus(LinkStatus::LinkClosed);
+                break;
+            }
+            
+        }
+
         auto linkCommand = m_packetLayer.getCommand();
 
         NVIC_EnableIRQ(USB_IRQn);
@@ -42,35 +73,14 @@ void LinkModule::execute()
 
         if (linkCommand[0] == LINKCMD_READY_CLOSE_LINK)
         {
-            NVIC_DisableIRQ(USB_IRQn);
-
-            m_packetLayer.setTransiveHandler(readyCloseLinkCommand());
-
-            while (!m_packetLayer.idle()) { }
-            
-            NVIC_EnableIRQ(USB_IRQn);
-            
-            if (keepAlive)
-            {
-                sendLinkStatus(LinkStatus::LinkReconnecting);
-                m_packetLayer.disableHandshake();
-                k_sleep(K_MSEC(40));
-                m_packetLayer.reset();
-                k_sleep(K_MSEC(200));
-                if (m_packetLayer.getMode() == PacketLayer::Mode::master)
-                {
-                    m_packetLayer.setMode(PacketLayer::Mode::master); // enable sync again
-                }
-                establishConncection();
-                m_packetLayer.setTransiveHandler(usbLinkCommand());
-            }
-            else 
-            {
-                sendLinkStatus(LinkStatus::LinkClosed);
-                break;
-            }
-            
+            partnerReadyCloseLink = true;
         }
+
+        if (usbCommand.has_value() && usbCommand.value()[0] == LINKCMD_READY_CLOSE_LINK)
+        {
+            readyCloseLink = true;
+        }
+
         k_sleep(K_MSEC(5));
         NVIC_DisableIRQ(USB_IRQn);
     }

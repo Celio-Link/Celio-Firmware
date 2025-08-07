@@ -25,6 +25,7 @@ uint16_t usbLinkTransive()
 {
     if (!g_packetAvailable) return 0x00;
     uint16_t ret = g_packet[g_index];
+    if (g_index == 0 && g_packet[0] == 0xFF06) ret = 0x5FFF;
     g_index++;
     if (g_index == 8)
     {

@@ -38,6 +38,9 @@ static TransiveDoneHandler g_transiveDoneCallback = NULL;
 
 static enum LinkMode g_mode = SLAVE;
 
+static bool g_lockout = false;
+struct k_timer g_lockoutTimer;
+
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
 static struct gpio_callback g_linkStartReceiveSlaveCallback;
@@ -278,7 +281,10 @@ void link_startTransive()
 
 static void startReceiveSlave(const struct device *port, struct gpio_callback *cb, gpio_port_pins_t pins)
 {
+    if (g_lockout) return;
     LL_TIM_EnableCounter(TIM3);
+    k_timer_start(&g_lockoutTimer, K_MSEC(1), K_NO_WAIT);
+    g_lockout = true;
 }
 
 static void startReceiveMaster(const struct device *port, struct gpio_callback *cb, gpio_port_pins_t pins)
@@ -316,10 +322,17 @@ static void setUpDMATimer()
     LL_TIM_SetTriggerOutput(TIM3, LL_TIM_TRGO_UPDATE);
 }
 
+static void link_lockoutReset(struct k_timer* timer)
+{
+    g_lockout = false;
+}
+
 static int link_init()
 {
     tx_data[0] = BSSR_RESET;
     tx_data[17] = BSSR_SET;
+
+    k_timer_init(&g_lockoutTimer, link_lockoutReset, NULL);
 
     gpio_pin_configure(gpioIO, GPIO_PIN_LEADER_START, GPIO_INPUT | GPIO_PULL_UP);
     gpio_pin_configure(gpioIO, GPIO_PIN_FOLLOWR_START, GPIO_INPUT | GPIO_PULL_UP);
