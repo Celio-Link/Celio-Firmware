@@ -172,7 +172,6 @@ static void dmaCompleteTransmit(const struct device *dev, void *user_data, uint3
 
             // Prepare state for next recive
             gpio_pin_configure(gpioIO, GPIO_PIN_DATA_INPUT_OUTPUT, GPIO_INPUT | GPIO_PULL_UP);
-            dma_config(dma, DMA_CHANNEL_TX, &dma_cfg_tx);
             dma_config(dma, DMA_CHANNEL_RX, &dma_cfg_rx);
             dma_start(dma, DMA_CHANNEL_RX);
             break;
@@ -270,6 +269,7 @@ void link_startTransive()
     g_linkTransmit = g_transmitCallback(g_transmitUserData);
     
     link_transmitToDma();
+    dma_config(dma, DMA_CHANNEL_TX, &dma_cfg_tx);
     dma_start(dma, DMA_CHANNEL_TX);
 
     gpio_pin_configure(gpioIO, GPIO_PIN_DATA_INPUT_OUTPUT, GPIO_OUTPUT_LOW);
