@@ -15,7 +15,11 @@ void LinkModule::execute()
     m_packetLayer.reset();
     m_packetLayer.disableHandshake();
     sendLinkStatus(LinkStatus::HandshakeWaiting);
+
+    while(m_packetLayer.getReceivedHandshake() != LINK_SLAVE_HANDSHAKE) { }
     k_event_wait(&m_connectEvent, modeEvent, true, K_FOREVER);
+    m_packetLayer.setMode(m_packetLayerMode);
+
     establishConncection();
     m_packetLayer.setTransiveHandler(usbLinkCommand());
 
@@ -38,6 +42,7 @@ void LinkModule::execute()
                 m_packetLayer.disableHandshake();
                 k_sleep(K_MSEC(40));
                 m_packetLayer.reset(); // disable sync
+                m_packetLayer.setTransiveHandler(usbLinkCommand());
                 k_sleep(K_MSEC(200));
                 if (m_packetLayer.getMode() == PacketLayer::Mode::master)
                 {
@@ -91,15 +96,21 @@ void LinkModule::receiveCommand(std::span<const uint8_t> command)
     switch (static_cast<LinkModeCommand>(command[0]))
     {
         case LinkModeCommand::SetModeMaster:
-            m_packetLayer.setMode(PacketLayer::Mode::slave);
+            m_packetLayerMode = PacketLayer::Mode::master;
             k_event_post(&m_connectEvent, modeEvent);
             break;
         case LinkModeCommand::SetModeSlave:
-            m_packetLayer.setMode(PacketLayer::Mode::master);
+            m_packetLayerMode = PacketLayer::Mode::slave;
             k_event_post(&m_connectEvent, modeEvent);
             break;
         case LinkModeCommand::StartHandshake: return m_packetLayer.enableHandshake();
-        case LinkModeCommand::ConnectLink: return m_packetLayer.connect();
+        case LinkModeCommand::ConnectLink:
+        {
+           if (m_packetLayer.getMode() == PacketLayer::Mode::master)
+           {
+                return m_packetLayer.connect();
+           }
+        } 
         default: break;
     }
 }
@@ -115,6 +126,7 @@ void LinkModule::establishConncection()
     {
         case PacketLayer::Mode::master:
             while(m_packetLayer.getTransmittedHandshake() != LINK_MASTER_HANDSHAKE) { }
+            sendLinkStatus(LinkStatus::LinkConnected);
             return;
 
         case PacketLayer::Mode::slave:

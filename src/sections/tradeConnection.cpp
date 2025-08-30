@@ -54,7 +54,7 @@ void TradeConnection::handleInitialDataExchange()
 
                     case TradeConnectionState::PartyPart0:
                     {
-                        const auto party = std::as_bytes(getParty().subspan<0, 2>());
+                        const auto party = std::as_bytes(party::getParty().subspan<0, 2>());
                         blockCommandSetup(party.data(), party.size(), 200);
                         m_blockState = TradeConnectionState::PartyPart1;
                         m_requestBlockSize = 1;
@@ -64,7 +64,7 @@ void TradeConnection::handleInitialDataExchange()
 
                     case TradeConnectionState::PartyPart1:
                     {
-                        const auto party = std::as_bytes(getParty().subspan<2, 2>());
+                        const auto party = std::as_bytes(party::getParty().subspan<2, 2>());
                         blockCommandSetup(party.data(), party.size(), 200);
                         m_blockState = TradeConnectionState::PartyPart2;
                         m_requestBlockSize = 1;
@@ -74,7 +74,7 @@ void TradeConnection::handleInitialDataExchange()
 
                     case TradeConnectionState::PartyPart2:
                     {
-                        const auto party = std::as_bytes(getParty().subspan<4, 2>());
+                        const auto party = std::as_bytes(party::getParty().subspan<4, 2>());
                         blockCommandSetup(party.data(), party.size(), 200);
                         m_blockState = TradeConnectionState::Mail;
                         m_requestBlockSize = 3;

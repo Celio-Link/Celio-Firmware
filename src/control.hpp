@@ -42,6 +42,8 @@ public:
         switch (m_mode)
         {
             case Mode::tradeEmu:
+                party::partyInit();
+                UsbLayer::getInstance().setReceiveDataHandler(party::usbReceivePkmFile, nullptr);
                 m_emuModule.execute();
                 break;
             case Mode::onlineLink:

@@ -32,6 +32,7 @@ private:
     PacketLayer& m_packetLayer;
 
     struct k_event m_connectEvent;
+    PacketLayer::Mode m_packetLayerMode = PacketLayer::Mode::slave;
 
     //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
     // CALLS
