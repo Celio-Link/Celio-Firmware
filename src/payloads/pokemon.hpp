@@ -134,7 +134,7 @@ namespace party
 
     Pokemon deserializePokemon(std::span<const uint8_t> input);
 
-    void emptyPartySlot(Pokemon* mon);
+    void clearPartySlot(Pokemon* mon);
 
     int partyInit();
 

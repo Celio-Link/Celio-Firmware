@@ -149,10 +149,10 @@ namespace party
         return result;
     }
 
-    void emptyPartySlot(Pokemon* mon)
+    void clearPartySlot(Pokemon* mon)
     {
         uint8_t *raw = (uint8_t*)mon;
-        for (size_t i = 0; i < sizeof(struct BoxPokemon); i++)
+        for (size_t i = 0; i < sizeof(struct Pokemon); i++)
             raw[i] = 0;
         mon->mail = 0xFF;
     }
@@ -161,7 +161,7 @@ namespace party
     {
         mon.mail = 0x00;
         uint8_t *raw = (uint8_t*)&mon;
-        for (size_t i = 0; i < sizeof(struct BoxPokemon); i++)
+        for (size_t i = 0; i < sizeof(struct Pokemon); i++)
         {
             if(raw[i] != 0x00)
             {
@@ -176,7 +176,7 @@ namespace party
         g_receivedBytes = 0;
         for (auto& mon : g_party)
         {
-            emptyPartySlot(&mon);
+            clearPartySlot(&mon);
         }
         return 0;
     }
@@ -184,7 +184,7 @@ namespace party
     void usbReceivePkmFile(std::span<const uint8_t> data, void*)
     {
         static std::array<uint8_t, 0x64> encryptedPkm;
-        std::ranges::copy(data, std::span(encryptedPkm).first(g_receivedBytes).begin());
+        std::ranges::copy(data, std::span(encryptedPkm).subspan(g_receivedBytes).begin());
         g_receivedBytes += data.size();
         if (g_receivedBytes >= 0x64)
         {
@@ -192,6 +192,7 @@ namespace party
             {
                 if (partySlotIsEmpty(g_party[i])) g_party[i] = deserializePokemon(encryptedPkm);
                 g_party[i].mail = 0xFF; // don't bother with that
+                break;
             }
             g_receivedBytes = 0;
         }   
