@@ -1,0 +1,28 @@
+CompileFlags:
+  Remove: [
+    -fno-reorder-functions,
+    -fno-plt,
+    -fdiagnostics-color,
+    -fno-omit-frame-pointer,
+    -fno-strict-overflow,
+    -fno-var-tracking-assignments,
+    -mfp16-format=ieee
+  ]
+
+  Add: [
+    -Wall,
+    -Wextra,
+    -I/Users/nilskirchhof/zephyr-sdk-0.16.9/arm-zephyr-eabi/bin/../lib/gcc/arm-zephyr-eabi/12.2.0/../../../../arm-zephyr-eabi/include/c++/12.2.0,
+    -I/Users/nilskirchhof/zephyr-sdk-0.16.9/arm-zephyr-eabi/bin/../lib/gcc/arm-zephyr-eabi/12.2.0/../../../../arm-zephyr-eabi/include/c++/12.2.0/arm-zephyr-eabi,
+    -I/Users/nilskirchhof/zephyr-sdk-0.16.9/arm-zephyr-eabi/bin/../lib/gcc/arm-zephyr-eabi/12.2.0/../../../../arm-zephyr-eabi/include/c++/12.2.0/backward,
+    -I/Users/nilskirchhof/zephyr-sdk-0.16.9/arm-zephyr-eabi/bin/../lib/gcc/arm-zephyr-eabi/12.2.0/include,
+    -I/Users/nilskirchhof/zephyr-sdk-0.16.9/arm-zephyr-eabi/bin/../lib/gcc/arm-zephyr-eabi/12.2.0/include-fixed,
+    -I/Users/nilskirchhof/zephyr-sdk-0.16.9/arm-zephyr-eabi/bin/../lib/gcc/arm-zephyr-eabi/12.2.0/../../../../arm-zephyr-eabi/sys-include,
+    -I/Users/nilskirchhof/zephyr-sdk-0.16.9/arm-zephyr-eabi/bin/../lib/gcc/arm-zephyr-eabi/12.2.0/../../../../arm-zephyr-eabi/include
+  ]
+
+Diagnostics:
+  Suppress: [
+    "unknown-argument",
+    "unknown-warning-option"
+  ]

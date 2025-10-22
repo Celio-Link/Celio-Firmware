@@ -5,3 +5,4 @@ modules/
 build/
 bootloader/
 tools/
+.cache/
