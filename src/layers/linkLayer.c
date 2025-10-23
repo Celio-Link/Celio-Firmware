@@ -42,7 +42,7 @@ static enum LinkMode g_mode = SLAVE;
 static struct gpio_callback g_linkStartReceiveSlaveCallback;
 static struct gpio_callback g_linkStartReceiveMasterCallback;
 
-const struct device* gpioIO = DEVICE_DT_GET(DT_NODELABEL(gpioa));
+const struct device* gpioIO = DEVICE_DT_GET(DT_NODELABEL(gpiob));
 const struct device* dma = DEVICE_DT_GET(DT_NODELABEL(dma1));
 
 static uint32_t tx_data[18] = {};
