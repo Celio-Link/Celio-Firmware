@@ -3,6 +3,7 @@
 #include "../layers/packetLayer.hpp"
 
 #include "nextSectionState.hpp"
+#include "sectionConnect.hpp"
 
 #pragma once
 
@@ -22,7 +23,8 @@ class TradeDisconnect
 public:
     TradeDisconnect(PacketLayer& layer, bool& cancel) : m_packetLayer(layer), m_cancel(cancel)
     {
-        //m_packetLayer.setMode(PacketLayer::Mode::slave);
+        //section::connectAsSlave(m_packetLayer, m_cancel); // will connect but we currently don't react correctlt to exit standby or something
+        section::connectAsMaster(m_packetLayer, m_cancel);
     }
 
     ~TradeDisconnect()

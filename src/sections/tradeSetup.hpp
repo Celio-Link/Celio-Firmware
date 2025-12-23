@@ -4,6 +4,7 @@
 #include "../layers/usbLayer.hpp"
 
 #include "nextSectionState.hpp"
+#include "sectionConnect.hpp"
 
 #pragma once
 
@@ -20,7 +21,11 @@ class TradeSetup
 public:
     TradeSetup(PacketLayer& layer, uint16_t linkType, bool& cancel) : m_packetLayer(layer), m_linkType(linkType), m_cancel(cancel)
     {
-        
+        #ifdef CONFIG_SECTIONS_USE_MASTER_MODE
+        section::connectAsMaster(m_packetLayer, m_cancel);
+        #else
+        section::connectAsSlave(m_packetLayer, m_cancel);
+        #endif
     }
 
     ~TradeSetup()

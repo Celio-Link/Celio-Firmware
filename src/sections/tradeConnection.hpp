@@ -5,6 +5,7 @@
 #include "../payloads/mail.hpp"
 
 #include "nextSectionState.hpp"
+#include "sectionConnect.hpp"
 extern "C"
 {
     #include "../payloads/linkPlayer.h"
@@ -28,7 +29,7 @@ class TradeConnection
 public:
     TradeConnection(PacketLayer& layer, bool& cancel) : m_packetLayer(layer), m_cancel(cancel)
     {
-        //m_packetLayer.setMode(PacketLayer::Mode::master);
+        section::connectAsMaster(m_packetLayer, m_cancel);
         k_timer_init(&m_commandRequestTimer, requestBlockCommand, NULL);
         k_timer_user_data_set(&m_commandRequestTimer, this);
     }

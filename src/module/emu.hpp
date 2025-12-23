@@ -24,8 +24,6 @@ public:
     }
 
 private:
-    void connect();
-    void connectSlave();
     bool m_cancel = false;
     PacketLayer& m_packetLayer;
 };

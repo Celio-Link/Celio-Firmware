@@ -4,6 +4,7 @@
 #include "../layers/usbLayer.hpp"
 
 #include "nextSectionState.hpp"
+#include "sectionConnect.hpp"
 
 #pragma once
 
@@ -20,7 +21,7 @@ class TradeLounge
 public:
     TradeLounge(PacketLayer& layer, bool& cancel) : m_packetLayer(layer), m_cancel(cancel)
     {
-        //m_packetLayer.setMode(PacketLayer::Mode::master);
+        section::connectAsMaster(m_packetLayer, m_cancel);
     }
 
     ~TradeLounge()

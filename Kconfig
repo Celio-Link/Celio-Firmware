@@ -1,0 +1,14 @@
+mainmenu "Celio Device Settings"
+source "Kconfig.zephyr"
+
+menu "Application Options"
+    config SECTIONS_USE_MASTER_MODE
+    bool "Use master mode to connect"
+    default y
+    help
+        Use master mode to connect. 
+        Disbale for slave mode to help debug slave setting
+        WARNING for future Nils: This will probably not work since Game saves player under player ID which will swap if
+        in next section device will switch to master. Why it works in "disconnect" is unkown, but probably due to slightly
+        different code paths. To confirm see "DoesLinkPlayerCountMatchSaved" and change accordingly 
+endmenu

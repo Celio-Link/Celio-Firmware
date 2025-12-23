@@ -1,20 +1,14 @@
 #include "tradeConnection.hpp"
 
 #include "../payloads/pokemon.hpp"
-#include "../payloads/mail.hpp"
 #include <bit>
 #include <cstdint>
-#include <memory>
 #include <sys/types.h>
 extern "C"
 {
     #include "../payloads/linkPlayer.h"
 }
 #include "../callbacks/commands.hpp"
-
-#include "../layers/usbLayer.hpp"
-
-#include <algorithm>
 
 void TradeConnection::handleInitialDataExchange()
 {

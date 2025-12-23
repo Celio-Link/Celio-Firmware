@@ -10,11 +10,11 @@ extern "C"
 
 #include <zephyr/drivers/gpio.h>
 
-#include <algorithm>
-
 NextSection TradeSetup::process()
 {
+    #ifdef CONFIG_SECTIONS_USE_MASTER_MODE
     m_packetLayer.setTransiveHandler(sendLinkTypeCommand(m_linkType));
+    #endif
     NextSection nextSection = NextSection::connection;
 
     while (!m_cancel)
@@ -23,12 +23,14 @@ NextSection TradeSetup::process()
 
         NVIC_EnableIRQ(USB_IRQn);
         
+        #ifdef CONFIG_SECTIONS_USE_MASTER_MODE
         if (m_blockState == BlockCommandState::RequestTrainerCard && m_packetLayer.idle())
         {
             m_packetLayer.setTransiveHandler(sendBlockCommandRequestCommand(2));
             m_blockState = BlockCommandState::TrainerCard;
             continue;
         }
+        #endif
         
         switch(command[0])
         {
@@ -43,7 +45,12 @@ NextSection TradeSetup::process()
                     {
                         const struct LinkPlayerBlock* linkPlayerBlock = linkPLayer(m_linkType);
                         blockCommandSetup(linkPlayerBlock, sizeof(*linkPlayerBlock), sizeof(*linkPlayerBlock));
+
+                        #ifdef CONFIG_SECTIONS_USE_MASTER_MODE
                         m_blockState = BlockCommandState::RequestTrainerCard;
+                        #else
+                        m_blockState = BlockCommandState::TrainerCard;
+                        #endif
                         break;
                     }
                     
@@ -87,7 +94,7 @@ NextSection TradeSetup::process()
                 m_packetLayer.setTransiveHandler(readyCloseLinkCommand());
                 k_sleep(K_MSEC(40));
                 m_packetLayer.reset(); //master
-                k_sleep(K_MSEC(400));
+                k_sleep(K_MSEC(300));
                 return nextSection;
             
             default: break;
