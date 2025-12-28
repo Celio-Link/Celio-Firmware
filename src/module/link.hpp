@@ -15,7 +15,7 @@ public:
     LinkModule(PacketLayer& packetLayer) : m_packetLayer(packetLayer)
     {
         m_packetLayer.disableHandshake();
-        k_event_init(&m_connectEvent);
+        k_sem_init(&m_waitForLinkModeCommand, 0, 1);
     }
 
     void execute();
@@ -32,6 +32,7 @@ private:
     PacketLayer& m_packetLayer;
 
     struct k_event m_connectEvent;
+    struct k_sem m_waitForLinkModeCommand;
     PacketLayer::Mode m_packetLayerMode = PacketLayer::Mode::slave;
 
     //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//

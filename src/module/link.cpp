@@ -1,14 +1,10 @@
 #include "link.hpp"
 #include "../linkStatus.hpp"
 #include "../callbacks/commands.hpp"
+#include "syscalls/kernel.h"
+#include "zephyr/kernel.h"
 #include <zephyr/irq.h>
 
-namespace 
-{
-    constexpr uint32_t modeEvent = BIT(0);
-    constexpr uint32_t enableHandshaleEvent = BIT(1);
-    constexpr uint32_t masterConnectEvent = BIT(2);
-}
 
 void LinkModule::execute()
 {
@@ -17,7 +13,8 @@ void LinkModule::execute()
     sendLinkStatus(LinkStatus::HandshakeWaiting);
 
     while(m_packetLayer.getReceivedHandshake() != LINK_SLAVE_HANDSHAKE) { }
-    k_event_wait(&m_connectEvent, modeEvent, true, K_FOREVER);
+    k_sem_take(&m_waitForLinkModeCommand, K_FOREVER);
+    
     m_packetLayer.setMode(m_packetLayerMode);
 
     establishConncection();
@@ -94,11 +91,11 @@ void LinkModule::receiveCommand(std::span<const uint8_t> command)
     {
         case LinkModeCommand::SetModeMaster:
             m_packetLayerMode = PacketLayer::Mode::master;
-            k_event_post(&m_connectEvent, modeEvent);
+            k_sem_give(&m_waitForLinkModeCommand);
             break;
         case LinkModeCommand::SetModeSlave:
             m_packetLayerMode = PacketLayer::Mode::slave;
-            k_event_post(&m_connectEvent, modeEvent);
+            k_sem_give(&m_waitForLinkModeCommand);            
             break;
         case LinkModeCommand::StartHandshake: return m_packetLayer.enableHandshake();
         case LinkModeCommand::ConnectLink:
