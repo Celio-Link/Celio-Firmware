@@ -20,15 +20,12 @@ void TradeConnection::handleInitialDataExchange()
         auto result = m_packetLayer.awaitTransiveResults();
         std::span<const uint16_t> command = result.received;
 
-        //NVIC_EnableIRQ(USB_IRQn);
-
         if (m_requestBlock)
         {
             m_requestBlock = false;
             m_packetLayer.setTransiveHandler(sendBlockCommandRequestCommand(m_requestBlockSize));
 
             k_sleep(K_MSEC(5));
-            //NVIC_DisableIRQ(USB_IRQn);
             continue;
         }
 
@@ -122,14 +119,12 @@ void TradeConnection::handleInitialDataExchange()
             {
                 if (m_blockState == TradeConnectionState::LinkCMD && m_packetLayer.idle())
                 {
-                    //NVIC_DisableIRQ(USB_IRQn);
                     return;
                 }
             }
         }
 
         k_sleep(K_MSEC(5));
-        //NVIC_DisableIRQ(USB_IRQn);
     }
 }
 
@@ -145,14 +140,11 @@ NextSection TradeConnection::handleTradeNegotiations()
         auto result = m_packetLayer.awaitTransiveResults();
         std::span<const uint16_t> command = result.received;
 
-        //NVIC_EnableIRQ(USB_IRQn);
-
         if (followupCmd && m_packetLayer.idle())
         {
             followupCmd = false;
             sendLinkCommand(cmd);
             k_sleep(K_MSEC(5));
-            //NVIC_DisableIRQ(USB_IRQn);
             continue;
         }
 
@@ -201,15 +193,12 @@ NextSection TradeConnection::handleTradeNegotiations()
             case LINKCMD_READY_CLOSE_LINK:
             {
                 m_packetLayer.setTransiveHandler(readyCloseLinkCommand());
-                k_sleep(K_MSEC(40));
-                //m_packetLayer.reset();
                 k_sleep(K_MSEC(400));
                 return nextSection;
             }
         }
 
         k_sleep(K_MSEC(5));
-        //NVIC_DisableIRQ(USB_IRQn);
     }
     return NextSection::cancel; // user canceled from web interface
 }

@@ -98,13 +98,18 @@ public:
 
     uint16_t getTransmittedHandshake()
     {
-        m_waiting = 1;
         k_sem_take(&m_handshakeSemaphore, K_FOREVER);
-        m_waiting = 0;
         return m_transmitedHandShake;
     }
 
-    void cancel() {  if (m_waiting == 1) k_sem_give(&m_handshakeSemaphore); }
+    void cancel() 
+    {  
+        // just give to every semaphore so we can make sure we don't softlock,
+        // object will be destroyed shorty anway so no concern about state
+        k_sem_give(&m_handshakeSemaphore); 
+        k_sem_give(&m_commandTransiveSemaphore);
+        k_sem_give(&m_saveToDisableSemaphore);
+    }
 
     bool idle() { return m_idle; }
 
@@ -224,7 +229,6 @@ private:
     //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
 private:
-    atomic_t m_waiting = 0;
     atomic_t m_waitForDisable = 0;
 
     bool m_idle = true;

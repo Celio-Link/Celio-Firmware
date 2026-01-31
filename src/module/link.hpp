@@ -1,7 +1,10 @@
 #include <zephyr/kernel.h>
-#include "../sections//usbSection.hpp"
 
-class LinkModule
+#include "../sections//usbSection.hpp"
+#include "moduleInterface.hpp"
+#include "syscalls/kernel.h"
+
+class LinkModule : public IModule
 {
 private:
     enum class LinkModeCommand : uint8_t
@@ -20,12 +23,20 @@ public:
 
     void execute();
 
-    bool canHandle(uint8_t command) { return (command & 0xF0) == 0x10; }
+    void cancel() override
+    { 
+        m_cancel = true;
+        k_sem_give(&m_waitForLinkModeCommand);
+        if (m_currentSection) m_currentSection->cancel();
+    }
 
-    void receiveCommand(std::span<const uint8_t> command);
+    bool canHandle(uint8_t command) override { return (command & 0xF0) == 0x10; }
+
+    void receiveCommand(std::span<const uint8_t> command) override;
 
 private:
 
+    bool m_cancel = false;
     struct k_sem m_waitForLinkModeCommand;
 
     UsbSection* m_currentSection = nullptr;

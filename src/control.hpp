@@ -1,9 +1,11 @@
-#include "./layers/usbLayer.hpp"
-#include "./layers/packetLayer.hpp"
-#include "./module/link.hpp"
-#include "./module/emu.hpp"
+#include "layers/usbLayer.hpp"
+#include "layers/packetLayer.hpp"
+#include "module/link.hpp"
+#include "module/emu.hpp"
 #include "linkStatus.hpp"
-#include "./callbacks/commands.hpp"
+#include "callbacks/commands.hpp"
+#include "payloads/pokemon.hpp"
+#include "module/moduleInterface.hpp"
 
 class Control
 {
@@ -22,9 +24,7 @@ class Control
     static constexpr uint8_t callSetModeId = 0x01;
 
 public:
-    Control() : 
-        m_linkModule()
-        //m_emuModule()
+    Control()
     {
         UsbLayer::getInstance().setReceiveCommandHandler(receiveCommandHandler, this);
 
@@ -33,39 +33,58 @@ public:
 
     void executeMode()
     {
+
         k_sem_take(&m_waitForModeSemaphore, K_FOREVER);
         sendLinkStatus(LinkStatus::DeviceReady);
+
         switch (m_mode)
         {
             case Mode::tradeEmu:
+            {
                 party::partyInit();
                 UsbLayer::getInstance().setReceiveDataHandler(party::usbReceivePkmFile, nullptr);
-                //m_emuModule.execute();
+
+                EmuModule emuModule;
+                m_currentModule = &emuModule;
+                emuModule.execute();
+
                 sendLinkStatus(LinkStatus::EmuTradeSessionFinished);
                 break;
+            }
+
             case Mode::onlineLink:
+            {
                 UsbLayer::getInstance().setReceiveDataHandler(usbLink_receiveHandler, nullptr);
-                m_linkModule.execute();
+
+                LinkModule linkModule;
+                m_currentModule = &linkModule;
+                linkModule.execute();
+
+                sendLinkStatus(LinkStatus::LinkClosed);
                 break;
+            }
         }
+
         m_mode = {};
+        m_currentModule = nullptr;
     }
 
 private:
     struct k_sem m_waitForModeSemaphore;
     Mode m_mode;
 
-    LinkModule m_linkModule;
-    //EmuModule m_emuModule;
+    IModule* m_currentModule = nullptr;
 
     bool canHandle(uint8_t command) { return (command & 0xF0) == 0x00; }
 
     void receiveCommand(std::span<const uint8_t> data)
     {
-        if (m_linkModule.canHandle(data[0])) return m_linkModule.receiveCommand(data);
-        //if (m_emuModule.canHandle(data[0])) return m_emuModule.receiveCommand(data);
+        if (m_currentModule != nullptr && m_currentModule->canHandle(data[0]))
+        {
+            return m_currentModule->receiveCommand(data);
+        } 
+        
         if (!canHandle(data[0])) return;
-
         switch (static_cast<ControlCommand>(data[0]))
         {
             case ControlCommand::SetMode: return callSetMode(static_cast<Mode>(data[1]));
@@ -86,15 +105,7 @@ private:
 
     void callCancel()
     {
-        switch (m_mode)
-        {
-            case Mode::tradeEmu:
-                //m_emuModule.cancel();
-                break;
-            case Mode::onlineLink:
-                //m_linkModule.cancel();
-                break;
-        }
+        if (m_currentModule != nullptr) m_currentModule->cancel();
     }
 
     //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//

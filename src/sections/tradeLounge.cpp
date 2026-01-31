@@ -16,7 +16,6 @@ NextSection TradeLounge::process()
     {
         auto result = m_packetLayer.awaitTransiveResults();
         std::span<const uint16_t> command = result.received;
-        //NVIC_EnableIRQ(USB_IRQn);
 
         switch(command[0])
         {
@@ -49,8 +48,6 @@ NextSection TradeLounge::process()
             case LINKCMD_READY_CLOSE_LINK:
             {
                 m_packetLayer.setTransiveHandler(readyCloseLinkCommand());
-                k_sleep(K_MSEC(40));
-                //m_packetLayer.reset(); //master
                 k_sleep(K_MSEC(200));
                 return nextSection;
             }
@@ -59,7 +56,6 @@ NextSection TradeLounge::process()
         }
 
         k_sleep(K_MSEC(5));
-        //NVIC_DisableIRQ(USB_IRQn);
     }
     return NextSection::cancel; // user canceled from web interface
 }

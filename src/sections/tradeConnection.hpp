@@ -5,7 +5,7 @@
 #include "../payloads/mail.hpp"
 
 #include "nextSectionState.hpp"
-#include "sectionConnect.hpp"
+#include "section.hpp"
 extern "C"
 {
     #include "../payloads/linkPlayer.h"
@@ -16,7 +16,7 @@ extern "C"
 
 
 
-class TradeConnection
+class TradeConnection : public Section
 {
     struct CommandEntry
     {
@@ -27,9 +27,9 @@ class TradeConnection
     };
 
 public:
-    TradeConnection(PacketLayer& layer, bool& cancel) : m_packetLayer(layer), m_cancel(cancel)
+    TradeConnection()
     {
-        section::connectAsMaster(m_packetLayer, m_cancel);
+        connectAsMaster();
         k_timer_init(&m_commandRequestTimer, requestBlockCommand, NULL);
         k_timer_user_data_set(&m_commandRequestTimer, this);
     }
@@ -39,7 +39,7 @@ public:
         while(!m_packetLayer.idle()) {};
     }
 
-    NextSection process();
+    NextSection process() override;
 
 private:
 
@@ -61,12 +61,10 @@ private:
     };
 
     TradeConnectionState m_blockState = TradeConnectionState::LinkPlayer;
-    PacketLayer& m_packetLayer;
     struct k_sem m_commandSemaphore;
     std::array<uint16_t, 8> m_currentCommand;
 
     struct k_timer m_commandRequestTimer;
-    bool& m_cancel;
 
     size_t m_emptyCounter = 0;
     bool m_requestBlock = false;

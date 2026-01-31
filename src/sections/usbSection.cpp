@@ -5,23 +5,36 @@
 
 void UsbSection::establishConncection()
 {
-    while(m_packetLayer.getReceivedHandshake() != LINK_SLAVE_HANDSHAKE) { }
+    while (m_packetLayer.getReceivedHandshake() != LINK_SLAVE_HANDSHAKE) 
+    {
+        if (m_cancel) return; 
+    }
+
     sendLinkStatus(LinkStatus::HandshakeReceived);
 
-    while(!m_packetLayer.isHandshakeEnabled()) { }
+    while (!m_packetLayer.isHandshakeEnabled()) 
+    { 
+        if (m_cancel) return; 
+    }
 
     switch (m_packetLayerMode)
     {
         case PacketLayer::Mode::master:
-            while(m_packetLayer.getTransmittedHandshake() != LINK_MASTER_HANDSHAKE) { }
-            sendLinkStatus(LinkStatus::LinkConnected);
-            return;
+            while (m_packetLayer.getTransmittedHandshake() != LINK_MASTER_HANDSHAKE) 
+            { 
+                if (m_cancel) return; 
+            }
+            break;
 
         case PacketLayer::Mode::slave:
-            while(m_packetLayer.getReceivedHandshake() != LINK_MASTER_HANDSHAKE) { }
-            sendLinkStatus(LinkStatus::LinkConnected);
-            return;
+            while (m_packetLayer.getReceivedHandshake() != LINK_MASTER_HANDSHAKE) 
+            { 
+                if (m_cancel) return; 
+            }
+            break;
     }
+
+    sendLinkStatus(LinkStatus::LinkConnected);
 }
 
 bool UsbSection::process()
@@ -31,7 +44,7 @@ bool UsbSection::process()
     bool readyCloseLink = false;
     establishConncection();
 
-    while(true)
+    while(!m_cancel)
     {
         PacketLayer::TransiveResult result = m_packetLayer.awaitTransiveResults();
         

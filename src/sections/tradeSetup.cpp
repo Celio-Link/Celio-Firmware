@@ -21,8 +21,6 @@ NextSection TradeSetup::process()
     {
         auto result = m_packetLayer.awaitTransiveResults();
         std::span<const uint16_t> command = result.received;
-
-        //NVIC_EnableIRQ(USB_IRQn);
         
         #ifdef CONFIG_SECTIONS_USE_MASTER_MODE
         if (m_blockState == BlockCommandState::RequestTrainerCard && m_packetLayer.idle())
@@ -93,15 +91,12 @@ NextSection TradeSetup::process()
             
             case LINKCMD_READY_CLOSE_LINK:
                 m_packetLayer.setTransiveHandler(readyCloseLinkCommand());
-                k_sleep(K_MSEC(40));
-                //m_packetLayer.reset(); //master
                 k_sleep(K_MSEC(300));
                 return nextSection;
             
             default: break;
         }
         k_sleep(K_MSEC(5));
-        //NVIC_DisableIRQ(USB_IRQn);
     }
     return NextSection::cancel; // user canceled from web interface
 }

@@ -16,13 +16,19 @@ public:
 
     void startHandshake() { m_packetLayer.enableHandshake(); }
 
+    void cancel() 
+    {
+        m_cancel = true;
+        m_packetLayer.cancel(); 
+    }
+
     void connectLink() 
     { 
         if (m_packetLayer.getMode() == PacketLayer::Mode::master) m_packetLayer.connectHandshake();
     }
 
 private:
-
+    bool m_cancel = false;
     void establishConncection();
 
     PacketLayer m_packetLayer;

@@ -4,11 +4,11 @@
 #include "../layers/usbLayer.hpp"
 
 #include "nextSectionState.hpp"
-#include "sectionConnect.hpp"
+#include "section.hpp"
 
 #pragma once
 
-class TradeSetup
+class TradeSetup : public Section
 {
 
     enum class BlockCommandState : uint8_t
@@ -19,12 +19,12 @@ class TradeSetup
     };
 
 public:
-    TradeSetup(PacketLayer& layer, uint16_t linkType, bool& cancel) : m_packetLayer(layer), m_linkType(linkType), m_cancel(cancel)
+    TradeSetup(uint16_t linkType) : m_linkType(linkType)
     {
         #ifdef CONFIG_SECTIONS_USE_MASTER_MODE
-        section::connectAsMaster(m_packetLayer, m_cancel);
+        connectAsMaster();
         #else
-        section::connectAsSlave(m_packetLayer, m_cancel);
+        connectAsSlave();
         #endif
     }
 
@@ -33,16 +33,14 @@ public:
         while(!m_packetLayer.idle()) {};
     }
 
-    NextSection process();
+    NextSection process() override;
 
 private:
 
     BlockCommandState m_blockState = BlockCommandState::LinkPlayer;
-    PacketLayer& m_packetLayer;
     struct k_sem m_commandSemaphore;
     uint16_t m_linkType;
     std::array<uint16_t, 8> m_currentCommand;
-    bool& m_cancel;
 
     size_t m_movementDataIndex = 0;
     std::array<uint16_t, 6> m_movementData = {LINK_KEY_CODE_DPAD_UP, LINK_KEY_CODE_DPAD_UP, LINK_KEY_CODE_DPAD_LEFT, LINK_KEY_CODE_DPAD_UP, LINK_KEY_CODE_DPAD_RIGHT, LINK_KEY_CODE_READY};

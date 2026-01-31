@@ -9,11 +9,12 @@
 
 void LinkModule::execute()
 {
+    m_cancel = false;
     sendLinkStatus(LinkStatus::AwaitMode);
     k_sem_take(&m_waitForLinkModeCommand, K_FOREVER);
     bool keepAlive = true;
 
-    while (keepAlive)
+    while (keepAlive && !m_cancel)
     {
         {
             UsbSection section(m_packetLayerMode);
@@ -27,8 +28,6 @@ void LinkModule::execute()
             sendLinkStatus(LinkStatus::LinkReconnecting);
             k_sleep(K_MSEC(400));
         }
-        else sendLinkStatus(LinkStatus::LinkClosed);
-        
     }
 }
 

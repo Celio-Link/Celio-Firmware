@@ -3,11 +3,11 @@
 #include "../layers/packetLayer.hpp"
 
 #include "nextSectionState.hpp"
-#include "sectionConnect.hpp"
+#include "section.hpp"
 
 #pragma once
 
-class TradeDisconnect
+class TradeDisconnect : public Section
 {
     enum class BlockCommandState : uint8_t
     {
@@ -21,10 +21,9 @@ class TradeDisconnect
     NextSection handleDisconnect();
 
 public:
-    TradeDisconnect(PacketLayer& layer, bool& cancel) : m_packetLayer(layer), m_cancel(cancel)
+    TradeDisconnect()
     {
-        //section::connectAsSlave(m_packetLayer, m_cancel); // will connect but we currently don't react correctlt to exit standby or something
-        section::connectAsMaster(m_packetLayer, m_cancel);
+        connectAsMaster();
     }
 
     ~TradeDisconnect()
@@ -32,10 +31,8 @@ public:
         while(!m_packetLayer.idle()) {};
     }
 
-    NextSection process();
+    NextSection process() override;
 
 private:
-    PacketLayer& m_packetLayer;
-    bool& m_cancel;
     BlockCommandState m_blockState = BlockCommandState::None;
 };

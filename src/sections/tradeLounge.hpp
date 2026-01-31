@@ -4,11 +4,11 @@
 #include "../layers/usbLayer.hpp"
 
 #include "nextSectionState.hpp"
-#include "sectionConnect.hpp"
+#include "section.hpp"
 
 #pragma once
 
-class TradeLounge
+class TradeLounge : public Section
 {
 
     enum class BlockCommandState : uint8_t
@@ -19,9 +19,9 @@ class TradeLounge
     };
 
 public:
-    TradeLounge(PacketLayer& layer, bool& cancel) : m_packetLayer(layer), m_cancel(cancel)
+    TradeLounge()
     {
-        section::connectAsMaster(m_packetLayer, m_cancel);
+        connectAsMaster();
     }
 
     ~TradeLounge()
@@ -29,16 +29,14 @@ public:
         while(!m_packetLayer.idle()) {};
     }
 
-    NextSection process();
+    NextSection process() override;
 
 private:
 
     BlockCommandState m_blockState = BlockCommandState::LinkPlayer;
-    PacketLayer& m_packetLayer;
     struct k_sem m_commandSemaphore;
     std::array<uint16_t, 8> m_currentCommand;
 
-    bool& m_cancel;
     size_t m_movementDataIndex = 0;
     std::array<uint16_t, 6> m_movementData = {LINK_KEY_CODE_DPAD_UP, LINK_KEY_CODE_DPAD_UP, LINK_KEY_CODE_DPAD_LEFT, LINK_KEY_CODE_DPAD_UP, LINK_KEY_CODE_DPAD_RIGHT, LINK_KEY_CODE_READY};
 };
