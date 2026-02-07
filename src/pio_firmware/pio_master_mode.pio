@@ -10,8 +10,8 @@
 
 .wrap_target
 
-set pindirs, 0b111
-set pins, 0b111 ; pins SO | SC | SD
+set pindirs, 0b1101 ; pins SD | SO | SI | SC
+set pins, 0b1101 
 
 wait_till_next_transmission:
     jmp y-- wait_till_next_transmission
@@ -28,17 +28,17 @@ mov y osr ; store in y for wait_till_next_transmission
 set x, 15
 pull ; tx value -> out
 
-set pins, 0b101
-set pins, 0b100 [15] ; UART start bit
+set pins, 0b1100
+set pins, 0b0100 [15] ; UART start bit
 
 transmit_data:
     out pins, SD_PIN_OUT [14]
     jmp x-- transmit_data
 
-set pins, 0b101 [15] ; UART stop bit
+set pins, 0b1100 [15] ; UART stop bit
 
-set pins, 0b001
-set pindirs, 0b110 ; change SD to input
+set pins, 0b1000
+set pindirs, 0b0101 ; change SD to input
 
 set x, 31 ; timeout value
 wait_for_rx:
@@ -55,7 +55,7 @@ receive_data:
 
 push [16] ; rx value
 
-set pins, 0b101 [30]
+set pins, 0b1100 [30]
 
 irq RX_TX_DONE_FLAG
 

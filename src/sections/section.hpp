@@ -6,10 +6,11 @@
 
 class Section 
 {
+protected:
+    Section() = default;
+    ~Section() = default;
 
 public:
-    virtual NextSection process() = 0;
-
     void cancel() 
     {
         m_packetLayer.cancel();
@@ -17,6 +18,8 @@ public:
     }
 
 protected:
+    virtual NextSection process() = 0;
+    
     inline void connectAsMaster()
     {
         m_packetLayer.setMode(PacketLayer::Mode::master);
@@ -43,7 +46,7 @@ protected:
         m_packetLayer.enableHandshake();
     }
 
-    bool m_cancel;
+    bool m_cancel = false;
     PacketLayer m_packetLayer;
 };
 

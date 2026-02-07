@@ -29,8 +29,8 @@ static enum LinkMode g_mode = SLAVE;
 
 RPI_PICO_PIO_DEFINE_PROGRAM(pio_master_fw, 0, 26,
                             //     .wrap_target
-    0xe087, //  0: set    pindirs, 7                 
-    0xe007, //  1: set    pins, 7                    
+    0xe08d, //  0: set    pindirs, 13                
+    0xe00d, //  1: set    pins, 13                   
     0x0082, //  2: jmp    y--, 2                     
     0xc001, //  3: irq    nowait 1                   
     0xe03e, //  4: set    x, 30                      
@@ -39,13 +39,13 @@ RPI_PICO_PIO_DEFINE_PROGRAM(pio_master_fw, 0, 26,
     0xa047, //  7: mov    y, osr                     
     0xe02f, //  8: set    x, 15                      
     0x80a0, //  9: pull   block                      
-    0xe005, // 10: set    pins, 5                    
+    0xe00c, // 10: set    pins, 12                   
     0xef04, // 11: set    pins, 4                [15]
     0x6e01, // 12: out    pins, 1                [14]
     0x004c, // 13: jmp    x--, 12                    
-    0xef05, // 14: set    pins, 5                [15]
-    0xe001, // 15: set    pins, 1                    
-    0xe086, // 16: set    pindirs, 6                 
+    0xef0c, // 14: set    pins, 12               [15]
+    0xe008, // 15: set    pins, 8                    
+    0xe085, // 16: set    pindirs, 5                 
     0xe03f, // 17: set    x, 31                      
     0x0053, // 18: jmp    x--, 19                    
     0x0035, // 19: jmp    !x, 21                     
@@ -54,7 +54,7 @@ RPI_PICO_PIO_DEFINE_PROGRAM(pio_master_fw, 0, 26,
     0x4e01, // 22: in     pins, 1                [14]
     0x0056, // 23: jmp    x--, 22                    
     0x9020, // 24: push   block                  [16]
-    0xfe05, // 25: set    pins, 5                [30]
+    0xfe0c, // 25: set    pins, 12               [30]
     0xc000, // 26: irq    nowait 0                   
             //     .wrap
 );
@@ -178,14 +178,14 @@ static void link_configureMaster()
 
     #pragma push_macro("pio0")
     #undef pio0
-    uint32_t SD_pin = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 0);
-    uint32_t SC_pin = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 1);
+    uint32_t SC_pin = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 0);
+    uint32_t SI_pin = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 1);
     uint32_t SO_pin = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 2);
-    uint32_t SI_pin = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 3);
+    uint32_t SD_pin = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 3);
     #pragma pop_macro("pio0")
     
     sm_config_set_out_pins(&sm_config, SD_pin, 1);
-    sm_config_set_set_pins(&sm_config, SD_pin, 4);
+    sm_config_set_set_pins(&sm_config, SC_pin, 4);
     sm_config_set_in_pins(&sm_config, SD_pin);
     sm_config_set_jmp_pin(&sm_config, SD_pin);
 
@@ -222,14 +222,14 @@ static void link_configureSlave()
 
     #pragma push_macro("pio0")
     #undef pio0
-    uint32_t SD_pin = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 0);
-    uint32_t SC_pin = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 1);
+    uint32_t SC_pin = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 0);
+    uint32_t SI_pin = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 1);
     uint32_t SO_pin = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 2);
-    uint32_t SI_pin = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 3);
+    uint32_t SD_pin = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 3);
     #pragma pop_macro("pio0")
 
     sm_config_set_out_pins(&sm_config, SD_pin, 1);
-    sm_config_set_set_pins(&sm_config, SD_pin, 4);
+    sm_config_set_set_pins(&sm_config, SC_pin, 4);
     sm_config_set_in_pins(&sm_config, SD_pin);
 
     sm_config_set_out_shift(&sm_config, true, false, 0);

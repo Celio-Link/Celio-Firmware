@@ -39,7 +39,6 @@ void EmuModule::execute()
             case NextSection::cancel: [[fallthrough]];
             case NextSection::exit:
             {
-                m_cancel = false;
                 return;
             }
         }

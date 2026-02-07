@@ -15,7 +15,7 @@
 &pinctrl {
     pio0_pin_default: pio0_pin_default {
         link_pins {
-            pinmux = <PIO0_P8>, <PIO0_P9>, <PIO0_P10>, <PIO0_P11>;
+            pinmux = <PIO0_P0>, <PIO0_P1>, <PIO0_P2>, <PIO0_P3>;
             bias-pull-up;
             input-enable;
         };
