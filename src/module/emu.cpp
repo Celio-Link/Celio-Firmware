@@ -19,7 +19,7 @@ void EmuModule::execute()
             {
                 TradeConnection tradeConnection;
                 m_currentSection = &tradeConnection;
-                nextSection = tradeConnection.process(); // -> tradeLounge? / -> disconnect / -> cancel
+                nextSection = tradeConnection.process(); // -> tradeLounge / -> disconnect / -> cancel
                 break;
             }
             case NextSection::disconnect:

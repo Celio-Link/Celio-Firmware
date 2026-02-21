@@ -2,7 +2,7 @@
 
 #include "hardware/pio.h"
 
-#include "zephyr/drivers//misc/pio_rpi_pico/pio_rpi_pico.h"
+#include <zephyr/drivers//misc/pio_rpi_pico/pio_rpi_pico.h>
 #include <zephyr/drivers/pinctrl.h>
 
 #define TX_RX_DONE_IRQ 0
