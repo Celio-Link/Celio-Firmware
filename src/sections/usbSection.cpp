@@ -48,8 +48,8 @@ bool UsbSection::process()
     while(!m_cancel)
     {
         PacketLayer::TransiveResult result = m_packetLayer.awaitTransiveResults();
-        
-        UsbLayer::getInstance().sendData(std::span(reinterpret_cast<const uint8_t*>(result.received.data()), 16));
+
+        bufferReceivedPackets(result.received);
 
         if ((result.received[0] == LINKCMD_SEND_HELD_KEYS) && (result.received[1] == LINK_KEY_CODE_EXIT_ROOM))
         {
@@ -73,9 +73,11 @@ bool UsbSection::process()
 
         if (partnerReadyCloseLink && readyCloseLink)
         {   
-            return keepAlive;
+            break;
         }
     }
 
-    return false;
+    flush();
+
+    return keepAlive;
 }

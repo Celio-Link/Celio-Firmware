@@ -42,7 +42,7 @@ public:
     {
         if (!m_endpointsEnabled) return false;
         std::ranges::copy(data, m_sendData.begin());
-        usb_transfer_sync(statusInEndpoint, m_sendData.data(), data.size(), USB_TRANS_WRITE);
+        usb_transfer_sync(statusInEndpoint, m_sendData.data(), data.size_bytes(), USB_TRANS_WRITE);
         return true;
     }
 
@@ -50,7 +50,7 @@ public:
     {
         if (!m_endpointsEnabled) return false;
         std::ranges::copy(data, m_sendData.begin());
-        return usb_transfer(dataInEndpoint, m_sendData.data(), data.size(), USB_TRANS_WRITE, m_usbWriteDataCallback, this) == 0;
+        return usb_transfer(dataInEndpoint, m_sendData.data(), data.size_bytes(), USB_TRANS_WRITE, m_usbWriteDataCallback, this) == 0;
     }
 
     void setReceiveCommandHandler(const UsbReceiveHandler& handler, void* userData)
