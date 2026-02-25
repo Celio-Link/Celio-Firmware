@@ -15,6 +15,8 @@ To flash the RP2040:
 2. Connect the device to your computer.
 3. Drag and drop the firmware `.uf2` file onto the mounted device.
 
+Visit [celi0.link](https://celi0.link) to use the **Celio-Device**.
+
 ---
 
 ## Game Boy Advance Connectivity
