@@ -1,7 +1,5 @@
 
 #include "zephyr/drivers/usb/usb_dc.h"
-#include "zephyr/irq.h"
-#include "zephyr/sys/reboot.h"
 #include <cerrno>
 #include <cstdint>
 #include <zephyr/sys/byteorder.h>
