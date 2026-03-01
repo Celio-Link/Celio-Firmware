@@ -8,6 +8,7 @@ extern "C"
     #include "../layers/gbLinkLayer.h"
     #include "../layers/linkLayer.h"
     #include "hardware/gpio.h"
+    #include "hardware/timer.h"
 }
 
 // --- Pin Definitions ---
@@ -22,7 +23,6 @@ static constexpr uint8_t MAX_TRANSFER_BYTES = 0x40;
 // --- Shared state for USB data reception ---
 static uint8_t g_rxBuf[MAX_TRANSFER_BYTES * 2];
 static uint32_t g_rxCount = 0;
-static struct k_sem g_dataSem;
 static bool g_dataReady = false;
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
@@ -179,8 +179,7 @@ void GBModule::normalModeLoop()
         }
 
         // Transfer in chunks matching bytes_per_transfer setting
-        // Delay is applied BETWEEN chunks (e.g., between 4-byte words for multiboot)
-        // NOT between individual bytes within a chunk
+        // Match old firmware: delay AFTER EVERY chunk including the last
         uint32_t totalProcessed = 0;
         while (totalProcessed < count) {
             uint32_t transferable = m_bytesPerTransfer;
@@ -188,14 +187,13 @@ void GBModule::normalModeLoop()
                 transferable = count - totalProcessed;
             }
             
-            // Transfer this chunk with no inter-byte delay
             gb_link_transfer(txBuf + totalProcessed, rxBuf + totalProcessed, 
                            transferable, 0);
             totalProcessed += transferable;
 
-            // Apply delay BETWEEN chunks (not after the last one)
-            if (m_usBetweenTransfer > 0 && totalProcessed < count) {
-                k_busy_wait(m_usBetweenTransfer);
+            // Delay after EVERY chunk (matches old firmware exactly)
+            if (m_usBetweenTransfer > 0) {
+                busy_wait_us(m_usBetweenTransfer);
             }
         }
 

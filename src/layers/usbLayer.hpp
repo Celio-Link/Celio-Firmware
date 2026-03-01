@@ -1,5 +1,4 @@
 
-#include "zephyr/drivers/usb/usb_dc.h"
 #include <cerrno>
 #include <cstdint>
 #include <zephyr/sys/byteorder.h>
@@ -9,6 +8,7 @@
 #include <array>
 #include <algorithm>
 #include <zephyr/kernel.h>
+#include "../hardware.hpp"
 
 #pragma once
 
@@ -39,16 +39,20 @@ public:
     bool sendStatus(std::span<const uint8_t, 2> data)
     {
         if (!m_endpointsEnabled) return false;
-        std::ranges::copy(data, m_sendData.begin());
-        usb_transfer_sync(statusInEndpoint, m_sendData.data(), data.size_bytes(), USB_TRANS_WRITE);
-        return true;
+        std::ranges::copy(data, m_sendStatusData.begin());
+        // Use async transfer — host may not be reading the status endpoint
+        return usb_transfer(statusInEndpoint, m_sendStatusData.data(), data.size_bytes(), USB_TRANS_WRITE, m_usbWriteDataCallback, this) == 0;
     }
 
-    bool sendData(std::span<const uint8_t> data) 
+    bool sendData(std::span<const uint8_t> data)
     {
         if (!m_endpointsEnabled) return false;
         std::ranges::copy(data, m_sendData.begin());
-        return usb_transfer(dataInEndpoint, m_sendData.data(), data.size_bytes(), USB_TRANS_WRITE, m_usbWriteDataCallback, this) == 0;
+        // usb_transfer is async (queues a k_work item), but with bInterval=1 on
+        // the data endpoint the host polls every 1 ms, so the work-queue delay
+        // is absorbed within the next poll cycle and has no meaningful impact.
+        return usb_transfer(dataInEndpoint, m_sendData.data(), data.size_bytes(),
+            USB_TRANS_WRITE, m_usbWriteDataCallback, this) == 0;
     }
 
     void setReceiveCommandHandler(const UsbReceiveHandler& handler, void* userData)
@@ -71,6 +75,7 @@ public:
         {
         case USB_DC_CONFIGURED:
             m_endpointsEnabled = true;
+            Hardware::getInstance().setLED(0, 5, 0, true); // Green = USB connected
             break;
         case USB_DC_ERROR: 
             [[fallthrough]];
@@ -80,6 +85,7 @@ public:
             [[fallthrough]];
         case USB_DC_UNKNOWN:
             m_endpointsEnabled = false;
+            Hardware::getInstance().setLED(5, 0, 0, true); // Red = disconnected
             break;
 
         case USB_DC_CONNECTED:
@@ -143,6 +149,7 @@ private:
     };
     
     std::array<uint8_t, m_endpointSize> m_sendData = {};
+    std::array<uint8_t, 2> m_sendStatusData = {};  // Separate buffer for status to avoid race
 
     UsbLayer() 
     {

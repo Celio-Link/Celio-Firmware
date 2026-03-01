@@ -42,9 +42,11 @@ public:
 
     void executeMode()
     {
-
         k_sem_take(&m_waitForModeSemaphore, K_FOREVER);
         sendLinkStatus(LinkStatus::DeviceReady);
+
+        // LED blue = mode active
+        Hardware::getInstance().setLED(0, 0, 5, true);
 
         switch (m_mode)
         {
@@ -77,7 +79,7 @@ public:
             {
                 GBModule gbModule;
                 m_currentModule = &gbModule;
-                gbModule.execute();
+                gbModule.execute();  // GB module manages its own LED colors
 
                 sendLinkStatus(LinkStatus::GBSessionFinished);
                 break;

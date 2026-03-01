@@ -4,7 +4,11 @@
 #include "hardware/pio.h"
 #include "hardware/gpio.h"
 #include "hardware/clocks.h"
+#include "hardware/timer.h"
+
+extern "C" {
 #include <zephyr/drivers/misc/pio_rpi_pico/pio_rpi_pico.h>
+}
 
 // --- Pin Definitions ---
 #define WS2812_PIN      16
@@ -64,7 +68,9 @@ Hardware::Hardware()
 
 void Hardware::ws2812Init()
 {
-    // Get pio1 device from Zephyr device tree
+    // Pico SDK defines 'pio1' as a macro (pio1_hw) which breaks DT_NODELABEL.
+    // Temporarily undefine it so device tree lookup works.
+    #undef pio1
     const struct device* dev = DEVICE_DT_GET(DT_NODELABEL(pio1));
     if (!device_is_ready(dev)) {
         return;

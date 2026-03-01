@@ -3,8 +3,8 @@
 #include "hardware/pio.h"
 #include "hardware/gpio.h"
 #include "hardware/clocks.h"
+#include "hardware/timer.h"
 #include <zephyr/drivers/misc/pio_rpi_pico/pio_rpi_pico.h>
-#include <zephyr/drivers/pinctrl.h>
 
 // --- Pin Definitions (same as GBA link) ---
 #define PIN_SCK  0
@@ -19,7 +19,7 @@
 //   mov pins, x side 1 [1] ; Output data, assert SCK
 //   in pins, 1  side 0     ; Input data, deassert SCK
 static const uint16_t gb_spi_program_instructions[] = {
-    0x6001, //  out x, 1       side 0
+    0x6021, //  out x, 1       side 0  (0x6001 was wrong: that encodes 'out pins, 1')
     0xb101, //  mov pins, x    side 1 [1]
     0x4001, //  in pins, 1     side 0
 };
@@ -35,16 +35,12 @@ static PIO g_gb_pio = NULL;
 static uint g_gb_sm = 0;
 static bool g_gb_initialized = false;
 
-// PINCTRL_DT_DEFINE is already in linkLayer_pio.c — reference it via extern
-extern const struct pinctrl_dev_config pinctrl_pio_link;
-
 void gb_link_init(void)
 {
     if (g_gb_initialized) return;
 
     // Get pio0 from device tree (same PIO block as GBA link)
     const struct device* dev = DEVICE_DT_GET(DT_PROP(DT_NODELABEL(pio_link), pio));
-    const struct pinctrl_dev_config* config = &pinctrl_pio_link;
 
     g_gb_pio = pio_rpi_pico_get_pio(dev);
 
@@ -61,14 +57,13 @@ void gb_link_init(void)
     // Load GB SPI program
     uint32_t offset = pio_add_program(g_gb_pio, &gb_spi_program);
 
-    // Configure state machine for GB 8-bit SPI (matching reconfigurable firmware)
+    // Configure state machine for GB 8-bit SPI
+    // Must match reconfigurable firmware: pio_spi_init(pio, sm, offs, 8, 4058.838/128, cpha=1, cpol=1, PIN_SCK, PIN_SOUT, PIN_SIN)
     pio_sm_config c = pio_get_default_sm_config();
 
-    // MOSI pin (GB's SIN from our perspective = our SOUT = PIN_SOUT)
+    // MOSI = PIN_SOUT (pin 2), MISO = PIN_SIN (pin 1)
     sm_config_set_out_pins(&c, PIN_SOUT, 1);
-    // MISO pin (GB's SOUT from our perspective = our SIN = PIN_SIN)
-    // SD pin used for chip select detection
-    sm_config_set_in_pins(&c, PIN_SD);
+    sm_config_set_in_pins(&c, PIN_SIN);
     // SCK is sideset
     sm_config_set_sideset_pins(&c, PIN_SCK);
     sm_config_set_sideset(&c, 1, false, false);
@@ -82,12 +77,6 @@ void gb_link_init(void)
 
     sm_config_set_wrap(&c, offset, offset + 2);
 
-    // Init GPIO pins for PIO
-    pio_gpio_init(g_gb_pio, PIN_SCK);
-    pio_gpio_init(g_gb_pio, PIN_SOUT);
-    pio_gpio_init(g_gb_pio, PIN_SIN);
-    pio_gpio_init(g_gb_pio, PIN_SD);
-
     // SCK and MOSI are outputs, MISO is input
     pio_sm_set_pins_with_mask(g_gb_pio, g_gb_sm, 0,
         (1u << PIN_SCK) | (1u << PIN_SOUT));
@@ -95,11 +84,19 @@ void gb_link_init(void)
         (1u << PIN_SCK) | (1u << PIN_SOUT),
         (1u << PIN_SCK) | (1u << PIN_SOUT) | (1u << PIN_SIN));
 
-    // Bypass input synchronizer for lower latency
-    hw_set_bits(&g_gb_pio->input_sync_bypass, 1u << PIN_SIN);
+    // Must map the OUT pin direction to the state machine properly
+    pio_sm_set_consecutive_pindirs(g_gb_pio, g_gb_sm, PIN_SOUT, 1, true);
 
-    // Apply pin configuration
-    pinctrl_apply_state(config, PINCTRL_STATE_DEFAULT);
+    // Init GPIO pins for PIO
+    pio_gpio_init(g_gb_pio, PIN_SOUT);
+    pio_gpio_init(g_gb_pio, PIN_SIN);
+    pio_gpio_init(g_gb_pio, PIN_SCK);
+
+    // CPOL=1: invert SCK output so idle state is HIGH (matches reconfigurable firmware)
+    gpio_set_outover(PIN_SCK, GPIO_OVERRIDE_INVERT);
+
+    // Bypass input synchronizer for lower latency on MISO
+    hw_set_bits(&g_gb_pio->input_sync_bypass, 1u << PIN_SIN);
 
     pio_sm_init(g_gb_pio, g_gb_sm, offset, &c);
     pio_sm_set_enabled(g_gb_pio, g_gb_sm, true);
