@@ -23,9 +23,10 @@ jobs:
       - name: Install west
         run: pip install west
 
-      - name: Initialize Zephyr workspace
+      - name: Initialize west workspace
         run: |
-          west init -l .
+          cd ..
+          west init -l GBLink-Firmware
           west update
 
       - name: Install Zephyr SDK
