@@ -27,6 +27,7 @@ target_sources(
     app
     PRIVATE
     src/main.cpp
+    src/hardware.cpp
 )
 
 set_compiler_property(PROPERTY diagnostic -fdiagnostics-color=never)

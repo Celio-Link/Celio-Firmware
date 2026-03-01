@@ -2,23 +2,32 @@
 #include "layers/packetLayer.hpp"
 #include "module/link.hpp"
 #include "module/emu.hpp"
+#include "module/gb.hpp"
 #include "linkStatus.hpp"
 #include "callbacks/commands.hpp"
 #include "payloads/pokemon.hpp"
 #include "module/moduleInterface.hpp"
+#include "hardware.hpp"
 
 class Control
 {
     enum class ControlCommand
     {
         SetMode = 0x00,
-        Cancel = 0x01
+        Cancel = 0x01,
+        GetFirmwareInfo = 0x0F
     };
+
+    // Firmware version: 2.0.0
+    static constexpr uint8_t FW_VERSION_MAJOR = 2;
+    static constexpr uint8_t FW_VERSION_MINOR = 0;
+    static constexpr uint8_t FW_VERSION_PATCH = 0;
 
     enum class Mode 
     {
-        tradeEmu = 0x00,
-        onlineLink = 0x01
+        gbaTradeEmu = 0x00,
+        gbaLink = 0x01,
+        gbLink = 0x02
     };
 
     static constexpr uint8_t callSetModeId = 0x01;
@@ -39,7 +48,7 @@ public:
 
         switch (m_mode)
         {
-            case Mode::tradeEmu:
+            case Mode::gbaTradeEmu:
             {
                 party::partyInit();
                 UsbLayer::getInstance().setReceiveDataHandler(party::usbReceivePkmFile, nullptr);
@@ -52,7 +61,7 @@ public:
                 break;
             }
 
-            case Mode::onlineLink:
+            case Mode::gbaLink:
             {
                 UsbLayer::getInstance().setReceiveDataHandler(usbLink_receiveHandler, nullptr);
 
@@ -61,6 +70,16 @@ public:
                 linkModule.execute();
 
                 sendLinkStatus(LinkStatus::LinkClosed);
+                break;
+            }
+
+            case Mode::gbLink:
+            {
+                GBModule gbModule;
+                m_currentModule = &gbModule;
+                gbModule.execute();
+
+                sendLinkStatus(LinkStatus::GBSessionFinished);
                 break;
             }
         }
@@ -77,8 +96,24 @@ private:
 
     bool canHandle(uint8_t command) { return (command & 0xF0) == 0x00; }
 
+    // Hardware commands (0x40-0x4F) are device-level, handled regardless of active module
+    bool isHardwareCommand(uint8_t command) { return (command & 0xF0) == 0x40; }
+
+    enum class HardwareCommand : uint8_t
+    {
+        SetVoltage3V3 = 0x40,
+        SetVoltage5V = 0x41,
+        SetLEDColor = 0x42,
+    };
+
     void receiveCommand(std::span<const uint8_t> data)
     {
+        // Handle hardware commands first (device-level, always available)
+        if (isHardwareCommand(data[0]))
+        {
+            return handleHardwareCommand(data);
+        }
+
         if (m_currentModule != nullptr && m_currentModule->canHandle(data[0]))
         {
             return m_currentModule->receiveCommand(data);
@@ -89,7 +124,27 @@ private:
         {
             case ControlCommand::SetMode: return callSetMode(static_cast<Mode>(data[1]));
             case ControlCommand::Cancel: return callCancel();
+            case ControlCommand::GetFirmwareInfo: return callGetFirmwareInfo();
             default: return;
+        }
+    }
+
+    void handleHardwareCommand(std::span<const uint8_t> data)
+    {
+        switch (static_cast<HardwareCommand>(data[0]))
+        {
+            case HardwareCommand::SetVoltage3V3:
+                Hardware::getInstance().setVoltage3V3();
+                break;
+            case HardwareCommand::SetVoltage5V:
+                Hardware::getInstance().setVoltage5V();
+                break;
+            case HardwareCommand::SetLEDColor:
+                if (data.size() >= 5) {
+                    Hardware::getInstance().setLED(data[1], data[2], data[3], data[4] != 0);
+                }
+                break;
+            default: break;
         }
     }
 
@@ -106,6 +161,18 @@ private:
     void callCancel()
     {
         if (m_currentModule != nullptr) m_currentModule->cancel();
+    }
+
+    void callGetFirmwareInfo()
+    {
+        const uint8_t info[] = {
+            0x0F, // Echo back the command ID so web app knows this is a firmware info response
+            FW_VERSION_MAJOR,
+            FW_VERSION_MINOR,
+            FW_VERSION_PATCH
+        };
+        UsbLayer::getInstance().sendData(
+            std::span<const uint8_t>(info, sizeof(info)));
     }
 
     //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//

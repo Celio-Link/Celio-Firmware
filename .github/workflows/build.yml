@@ -1,0 +1,50 @@
+name: Build Firmware
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install west
+        run: pip install west
+
+      - name: Initialize Zephyr workspace
+        run: |
+          west init -l .
+          west update
+
+      - name: Install Zephyr SDK
+        uses: zephyrproject-rtos/action-zephyr-setup@v1
+
+      - name: Build firmware
+        run: west build -b rpi_pico
+
+      - name: Rename firmware
+        run: cp build/zephyr/zephyr.uf2 gblink.uf2
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gblink-firmware
+          path: gblink.uf2
+
+      - name: Attach to Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: gblink.uf2

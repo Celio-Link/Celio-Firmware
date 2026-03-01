@@ -1,4 +1,4 @@
-mainmenu "Celio Device Settings"
+mainmenu "GBLink Device Settings"
 source "Kconfig.zephyr"
 
 menu "Application Options"
@@ -11,4 +11,11 @@ menu "Application Options"
         WARNING for future Nils: This will probably not work since Game saves player under player ID which will swap if
         in next section device will switch to master. Why it works in "disconnect" is unkown, but probably due to slightly
         different code paths. To confirm see "DoesLinkPlayerCountMatchSaved" and change accordingly 
+
+    config GB_LINK_MODE_ENABLED
+    bool "Enable Game Boy link mode"
+    default y
+    help
+        Enable support for Game Boy link communication.
+        This adds the GB SPI passthrough and printer modes.
 endmenu
