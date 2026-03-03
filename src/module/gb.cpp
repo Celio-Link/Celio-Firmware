@@ -2,7 +2,6 @@
 #include "../linkStatus.hpp"
 #include "../hardware.hpp"
 #include "../layers/usbLayer.hpp"
-
 extern "C"
 {
     #include "../layers/gbLinkLayer.h"
@@ -104,7 +103,7 @@ void GBModule::execute()
     // Initialize GB 8-bit SPI PIO on pio0
     gb_link_init();
 
-    // Set LED to blue (active/connected)
+    // Blue = GB/GBC mode
     Hardware::getInstance().setLED(0, 0, 5, true);
 
     // Set USB data handler
@@ -122,7 +121,7 @@ void GBModule::execute()
 
             case SubMode::printer:
                 sendLinkStatus(LinkStatus::GBPrinterModeActive);
-                Hardware::getInstance().setLED(5, 0, 5, true); // Purple for printer
+                Hardware::getInstance().setLED(5, 0, 5, true); // Purple = printer sub-mode
                 
                 // Disable PIO SPI for GPIO bit-bang printer mode
                 gb_link_deinit();
@@ -132,7 +131,7 @@ void GBModule::execute()
                 // Re-enable PIO SPI
                 gb_link_init();
                 
-                Hardware::getInstance().setLED(0, 0, 5, true); // Blue (active)
+                Hardware::getInstance().setLED(0, 0, 5, true); // Back to blue (GB mode)
                 m_subMode = SubMode::normal;
                 sendLinkStatus(LinkStatus::GBModeActive);
                 break;
@@ -144,6 +143,32 @@ void GBModule::execute()
 
     // Clear USB data handler
     UsbLayer::getInstance().setReceiveDataHandler(nullptr, nullptr);
+}
+
+//-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
+// Execute Printer Mode — Direct entry point for printer-only operation
+// Skips PIO SPI init entirely since printer uses GPIO bit-bang
+//-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
+
+void GBModule::executePrinterMode()
+{
+    m_cancel = false;
+    m_subMode = SubMode::printer;
+
+    // Disable GBA PIO link (free pio0 resources)
+    link_changeMode(DISABLED);
+
+    // No gb_link_init() — printer mode uses GPIO bit-bang, not PIO SPI
+
+    // Purple = printer mode
+    Hardware::getInstance().setLED(5, 0, 5, true);
+
+    sendLinkStatus(LinkStatus::GBPrinterModeActive);
+
+    printerModeLoop();
+
+    // Back to green (connected, no active mode)
+    Hardware::getInstance().setLED(0, 5, 0, true);
 }
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
@@ -253,10 +278,44 @@ void GBModule::printerModeLoop()
     const uint32_t IDLE_TIMEOUT = 10000000;
     const uint32_t PRINT_ABORT_TIMEOUT = 2000000;
 
+    // --- USB send buffer ---
+    // Buffer protocol bytes and send in batches for reliable USB transfer.
+    // UsbLayer::sendData() uses a single shared buffer and async usb_transfer()
+    // via Zephyr's work queue.  The bit-bang loop must yield periodically so the
+    // system work queue can actually process the queued transfers; without this
+    // the CPU is monopolised by the bit-bang loop and no data ever reaches the host.
+    uint8_t usbBuf[64];
+    uint8_t usbBufPos = 0;
+
+    auto flushUsbBuf = [&]() {
+        if (usbBufPos == 0) return;
+        // Retry in case the endpoint is still busy from a previous transfer
+        for (int attempt = 0; attempt < 20; attempt++) {
+            if (UsbLayer::getInstance().sendData(
+                    std::span<const uint8_t>(usbBuf, usbBufPos))) {
+                break;
+            }
+            // Endpoint busy — yield to let the work queue drain
+            k_yield();
+        }
+        usbBufPos = 0;
+        // Yield so the system work queue can execute the usb_transfer work item.
+        // This is essential: without it the work item stays queued forever because
+        // the bit-bang loop never blocks or sleeps.
+        k_yield();
+    };
+
+    auto bufferUsbByte = [&](uint8_t b) {
+        usbBuf[usbBufPos++] = b;
+        if (usbBufPos >= sizeof(usbBuf)) {
+            flushUsbBuf();
+        }
+    };
+
     // Send start marker to web app
-    uint8_t start_marker = 0xFF;
-    UsbLayer::getInstance().sendData(
-        std::span<const uint8_t>(&start_marker, 1));
+    usbBuf[0] = 0xFF;
+    usbBufPos = 1;
+    flushUsbBuf();
 
     while (m_subMode == SubMode::printer && !m_cancel)
     {
@@ -281,15 +340,21 @@ void GBModule::printerModeLoop()
                     received_bits = 0;
                     send_data = 0x00;
 
+                    // Discard any buffered data from the aborted packet
+                    usbBufPos = 0;
+
                     // Send "ABORTPRINT" to browser
                     const char* abort_marker = "ABORTPRINT";
                     UsbLayer::getInstance().sendData(
                         std::span<const uint8_t>(
                             reinterpret_cast<const uint8_t*>(abort_marker), 10));
+                    k_yield();
                     break;
                 }
 
                 idle_count = 0;
+                // Yield periodically during idle to keep USB responsive
+                k_yield();
             }
         }
 
@@ -348,15 +413,13 @@ void GBModule::printerModeLoop()
                 command = byte;
                 state = GB_COMPRESSION_INDICATOR;
                 send_data = 0x00;
-                UsbLayer::getInstance().sendData(
-                    std::span<const uint8_t>(&byte, 1));
+                bufferUsbByte(byte);
                 break;
 
             case GB_COMPRESSION_INDICATOR:
                 state = GB_LEN_LOWER;
                 send_data = 0x00;
-                UsbLayer::getInstance().sendData(
-                    std::span<const uint8_t>(&byte, 1));
+                bufferUsbByte(byte);
                 break;
 
             case GB_LEN_LOWER:
@@ -377,19 +440,14 @@ void GBModule::printerModeLoop()
                 }
                 send_data = 0x00;
 
-                uint8_t len_bytes[2] = {
-                    static_cast<uint8_t>(length & 0xFF),
-                    static_cast<uint8_t>((length >> 8) & 0xFF)
-                };
-                UsbLayer::getInstance().sendData(
-                    std::span<const uint8_t>(len_bytes, 2));
+                bufferUsbByte(static_cast<uint8_t>(length & 0xFF));
+                bufferUsbByte(static_cast<uint8_t>((length >> 8) & 0xFF));
                 break;
             }
 
             case GB_DATA:
                 data_count++;
-                UsbLayer::getInstance().sendData(
-                    std::span<const uint8_t>(&byte, 1));
+                bufferUsbByte(byte);
                 if (data_count >= length) {
                     state = GB_CHECKSUM_1;
                 }
@@ -417,15 +475,18 @@ void GBModule::printerModeLoop()
                 send_data = 0x00;
 
                 if (command == 0x02) {  // PRINT command
-                    uint8_t print_marker = 0xFE;
-                    UsbLayer::getInstance().sendData(
-                        std::span<const uint8_t>(&print_marker, 1));
+                    bufferUsbByte(0xFE);  // Print marker
                 }
+                // Flush at protocol packet boundary — the Game Boy pauses
+                // between packets while it processes the response, giving us
+                // ample time to drain USB data to the host.
+                flushUsbBuf();
                 break;
         }
     }
 
 exit_printer:
-    // Re-initialize GPIO for PIO SPI mode will happen via gb_link_init() in execute()
+    // Flush any remaining buffered data
+    flushUsbBuf();
     return;
 }

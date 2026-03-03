@@ -183,7 +183,10 @@ static void link_configureMaster()
     uint32_t SO_pin = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 2);
     uint32_t SD_pin = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 3);
     #pragma pop_macro("pio0")
-    
+#if defined(CONFIG_GBC_CABLE_ON_GBA)
+    SD_pin = 4;  // Generic GBC cable routes SD to GP4 instead of GP3
+#endif
+
     sm_config_set_out_pins(&sm_config, SD_pin, 1);
     sm_config_set_set_pins(&sm_config, SC_pin, 4);
     sm_config_set_in_pins(&sm_config, SD_pin);
@@ -227,6 +230,9 @@ static void link_configureSlave()
     uint32_t SO_pin = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 2);
     uint32_t SD_pin = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 3);
     #pragma pop_macro("pio0")
+#if defined(CONFIG_GBC_CABLE_ON_GBA)
+    SD_pin = 4;  // Generic GBC cable routes SD to GP4 instead of GP3
+#endif
 
     sm_config_set_out_pins(&sm_config, SD_pin, 1);
     sm_config_set_set_pins(&sm_config, SC_pin, 4);

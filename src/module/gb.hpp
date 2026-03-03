@@ -14,6 +14,7 @@ public:
     }
 
     void execute();
+    void executePrinterMode();
     void cancel() override;
     bool canHandle(uint8_t command) override;
     void receiveCommand(std::span<const uint8_t> command) override;

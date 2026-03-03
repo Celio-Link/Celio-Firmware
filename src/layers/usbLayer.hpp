@@ -75,7 +75,7 @@ public:
         {
         case USB_DC_CONFIGURED:
             m_endpointsEnabled = true;
-            Hardware::getInstance().setLED(0, 5, 0, true); // Green = USB connected
+            Hardware::getInstance().setLED(0, 5, 0, true); // Green = USB connected, no active mode
             break;
         case USB_DC_ERROR: 
             [[fallthrough]];
@@ -85,7 +85,7 @@ public:
             [[fallthrough]];
         case USB_DC_UNKNOWN:
             m_endpointsEnabled = false;
-            Hardware::getInstance().setLED(5, 0, 0, true); // Red = disconnected
+            Hardware::getInstance().setLED(5, 0, 0, true); // Red = power on, no USB
             break;
 
         case USB_DC_CONNECTED:
@@ -125,12 +125,16 @@ private:
 
     int perpareNextReceive(ReceiveDelegate& delegate)
     {
+        delegate.endpointBuffer.fill(0);
         return usb_transfer(delegate.endpoint, delegate.endpointBuffer.data(), delegate.endpointBuffer.size(), USB_TRANS_READ, m_usbReadCallback, &delegate);
     }
 
-    void receive(size_t size, ReceiveDelegate* delegate)
+    void receive(int size, ReceiveDelegate* delegate)
     {
-        (*delegate)(std::span(delegate->endpointBuffer.begin(), size));
+        if (size > 0)
+        {
+            (*delegate)(std::span(delegate->endpointBuffer.begin(), static_cast<size_t>(size)));
+        }
         perpareNextReceive(*delegate);
     }; 
 

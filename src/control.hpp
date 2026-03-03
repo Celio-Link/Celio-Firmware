@@ -15,6 +15,7 @@ class Control
     {
         SetMode = 0x00,
         Cancel = 0x01,
+        EnterGBPrinter = 0x03,
         GetFirmwareInfo = 0x0F
     };
 
@@ -23,11 +24,12 @@ class Control
     static constexpr uint8_t FW_VERSION_MINOR = 0;
     static constexpr uint8_t FW_VERSION_PATCH = 0;
 
-    enum class Mode 
+    enum class Mode
     {
         gbaTradeEmu = 0x00,
         gbaLink = 0x01,
-        gbLink = 0x02
+        gbLink = 0x02,
+        gbPrinter = 0x03
     };
 
     static constexpr uint8_t callSetModeId = 0x01;
@@ -45,13 +47,12 @@ public:
         k_sem_take(&m_waitForModeSemaphore, K_FOREVER);
         sendLinkStatus(LinkStatus::DeviceReady);
 
-        // LED blue = mode active
-        Hardware::getInstance().setLED(0, 0, 5, true);
-
         switch (m_mode)
         {
             case Mode::gbaTradeEmu:
             {
+                Hardware::getInstance().setLED(5, 5, 0, true); // Yellow = GBA mode
+
                 party::partyInit();
                 UsbLayer::getInstance().setReceiveDataHandler(party::usbReceivePkmFile, nullptr);
 
@@ -65,6 +66,8 @@ public:
 
             case Mode::gbaLink:
             {
+                Hardware::getInstance().setLED(5, 5, 0, true); // Yellow = GBA mode
+
                 UsbLayer::getInstance().setReceiveDataHandler(usbLink_receiveHandler, nullptr);
 
                 LinkModule linkModule;
@@ -79,7 +82,17 @@ public:
             {
                 GBModule gbModule;
                 m_currentModule = &gbModule;
-                gbModule.execute();  // GB module manages its own LED colors
+                gbModule.execute();  // Sets blue LED internally
+
+                sendLinkStatus(LinkStatus::GBSessionFinished);
+                break;
+            }
+
+            case Mode::gbPrinter:
+            {
+                GBModule gbModule;
+                m_currentModule = &gbModule;
+                gbModule.executePrinterMode();  // Sets purple LED internally
 
                 sendLinkStatus(LinkStatus::GBSessionFinished);
                 break;
@@ -88,6 +101,7 @@ public:
 
         m_mode = {};
         m_currentModule = nullptr;
+        Hardware::getInstance().setLED(0, 5, 0, true); // Green = connected, no active mode
     }
 
 private:
@@ -110,6 +124,8 @@ private:
 
     void receiveCommand(std::span<const uint8_t> data)
     {
+        if (data.empty()) return;
+
         // Handle hardware commands first (device-level, always available)
         if (isHardwareCommand(data[0]))
         {
@@ -126,6 +142,7 @@ private:
         {
             case ControlCommand::SetMode: return callSetMode(static_cast<Mode>(data[1]));
             case ControlCommand::Cancel: return callCancel();
+            case ControlCommand::EnterGBPrinter: return callSetMode(Mode::gbPrinter);
             case ControlCommand::GetFirmwareInfo: return callGetFirmwareInfo();
             default: return;
         }
@@ -156,8 +173,8 @@ private:
 
     void callSetMode(Mode mode)
     {
-        k_sem_give(&m_waitForModeSemaphore);
         m_mode = mode;
+        k_sem_give(&m_waitForModeSemaphore);
     }
 
     void callCancel()
