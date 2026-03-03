@@ -1,4 +1,4 @@
-# GBLink Firmware — Unified RP2040 Game Boy Link Adapter
+# GBLink Firmware — RP2040 Game Boy Link Adapter
 
 This firmware turns an RP2040 into a USB-to-Game Boy Link Cable adapter supporting both **Game Boy (Gen 1/2)** and **Game Boy Advance** communication over WebUSB.
 
