@@ -123,6 +123,13 @@ void gb_link_deinit(void)
     pio_sm_restart(g_gb_pio, g_gb_sm);
     pio_sm_clear_fifos(g_gb_pio, g_gb_sm);
 
+    // Restore SCK output override to normal (was set to INVERT for CPOL=1).
+    // Without this, GBA PIO link programs see inverted SCK after GB mode.
+    gpio_set_outover(PIN_SCK, GPIO_OVERRIDE_NORMAL);
+
+    // Clear input sync bypass (was set for lower MISO latency)
+    hw_clear_bits(&g_gb_pio->input_sync_bypass, 1u << PIN_SIN);
+
 #if defined(CONFIG_GB_LINK_DRIVE_SD_LOW)
     // Release SD back to input with pull-up (restores the pinctrl default
     // state so GBA_LINK and GBA_TRADE_EMU modes can take over the pin via PIO)
