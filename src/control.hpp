@@ -3,6 +3,7 @@
 #include "module/link.hpp"
 #include "module/emu.hpp"
 #include "module/gb.hpp"
+#include "module/rawRelay.hpp"
 #include "linkStatus.hpp"
 #include "callbacks/commands.hpp"
 #include "payloads/pokemon.hpp"
@@ -29,7 +30,8 @@ class Control
         gbaTradeEmu = 0x00,
         gbaLink = 0x01,
         gbLink = 0x02,
-        gbPrinter = 0x03
+        gbPrinter = 0x03,
+        gbaPassthrough = 0x04
     };
 
     static constexpr uint8_t callSetModeId = 0x01;
@@ -95,6 +97,20 @@ public:
                 gbModule.executePrinterMode();  // Sets purple LED internally
 
                 sendLinkStatus(LinkStatus::GBSessionFinished);
+                break;
+            }
+
+            case Mode::gbaPassthrough:
+            {
+                Hardware::getInstance().setLED(0, 5, 5, true); // Cyan = GBA passthrough mode
+
+                UsbLayer::getInstance().setReceiveDataHandler(rawRelay_receiveHandler, nullptr);
+
+                RawRelayModule rawRelayModule;
+                m_currentModule = &rawRelayModule;
+                rawRelayModule.execute();
+
+                sendLinkStatus(LinkStatus::LinkClosed);
                 break;
             }
         }
