@@ -27,58 +27,72 @@ static enum LinkMode g_mode = SLAVE;
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
+/* SET-instruction pin values.  SD position depends on cable type.
+ *   bit 0 = SC  (GP0)       bit 1 = SI  (GP1, always input)
+ *   bit 2 = SO  (GP2)       bit 3 = GP3 (SD for GBA cable)
+ *   bit 4 = GP4 (SD for GBC cable)                           */
+#if defined(CONFIG_GBC_CABLE_ON_GBA)
+#define PIO_SET_COUNT   5
+#define PIO_SD          16  /* bit 4 */
+#else
+#define PIO_SET_COUNT   4
+#define PIO_SD          8   /* bit 3 */
+#endif
+#define PIO_SC          1   /* bit 0 */
+#define PIO_SO          4   /* bit 2 */
+
 RPI_PICO_PIO_DEFINE_PROGRAM(pio_master_fw, 0, 26,
                             //     .wrap_target
-    0xe08d, //  0: set    pindirs, 13                
-    0xe00d, //  1: set    pins, 13                   
-    0x0082, //  2: jmp    y--, 2                     
-    0xc001, //  3: irq    nowait 1                   
-    0xe03e, //  4: set    x, 30                      
-    0x0245, //  5: jmp    x--, 5                 [2] 
-    0x80a0, //  6: pull   block                      
-    0xa047, //  7: mov    y, osr                     
-    0xe02f, //  8: set    x, 15                      
-    0x80a0, //  9: pull   block                      
-    0xe00c, // 10: set    pins, 12                   
-    0xef04, // 11: set    pins, 4                [15]
+    (0xe080 | PIO_SC | PIO_SO | PIO_SD), //  0: set    pindirs, SC|SO|SD=out
+    (0xe000 | PIO_SC | PIO_SO | PIO_SD), //  1: set    pins, SC|SO|SD=HIGH
+    0x0082, //  2: jmp    y--, 2
+    0xc001, //  3: irq    nowait 1
+    0xe03e, //  4: set    x, 30
+    0x0245, //  5: jmp    x--, 5                 [2]
+    0x80a0, //  6: pull   block
+    0xa047, //  7: mov    y, osr
+    0xe02f, //  8: set    x, 15
+    0x80a0, //  9: pull   block
+    (0xe000 | PIO_SO | PIO_SD),          // 10: set    pins, SO|SD=HIGH
+    0xef04, // 11: set    pins, SO=HIGH          [15]
     0x6e01, // 12: out    pins, 1                [14]
-    0x004c, // 13: jmp    x--, 12                    
-    0xef0c, // 14: set    pins, 12               [15]
-    0xe008, // 15: set    pins, 8                    
-    0xe085, // 16: set    pindirs, 5                 
-    0xe03f, // 17: set    x, 31                      
-    0x0053, // 18: jmp    x--, 19                    
-    0x0035, // 19: jmp    !x, 21                     
-    0x00d2, // 20: jmp    pin, 18                    
+    0x004c, // 13: jmp    x--, 12
+    (0xef00 | PIO_SO | PIO_SD),          // 14: set    pins, SO|SD=HIGH   [15]
+    (0xe000 | PIO_SD),                   // 15: set    pins, SD=HIGH
+    0xe085, // 16: set    pindirs, SC|SO=out
+    0xe03f, // 17: set    x, 31
+    0x0053, // 18: jmp    x--, 19
+    0x0035, // 19: jmp    !x, 21
+    0x00d2, // 20: jmp    pin, 18
     0xf62f, // 21: set    x, 15                  [22]
     0x4e01, // 22: in     pins, 1                [14]
-    0x0056, // 23: jmp    x--, 22                    
+    0x0056, // 23: jmp    x--, 22
     0x9020, // 24: push   block                  [16]
-    0xfe0c, // 25: set    pins, 12               [30]
-    0xc000, // 26: irq    nowait 0                   
+    (0xfe00 | PIO_SO | PIO_SD),          // 25: set    pins, SO|SD=HIGH   [30]
+    0xc000, // 26: irq    nowait 0
             //     .wrap
 );
 
 RPI_PICO_PIO_DEFINE_PROGRAM(pio_slave_fw, 0, 18,
                 //     .wrap_target
-    0xe008, //  0: set    pins, 8                    
-    0xe084, //  1: set    pindirs, 4                 
-    0xe02f, //  2: set    x, 15                      
-    0x2020, //  3: wait   0 pin, 0                   
+    (0xe000 | PIO_SD),                   //  0: set    pins, SD=HIGH
+    0xe084, //  1: set    pindirs, SO=out
+    0xe02f, //  2: set    x, 15
+    0x2020, //  3: wait   0 pin, 0
     0xd701, //  4: irq    nowait 1               [23]
     0x4e01, //  5: in     pins, 1                [14]
-    0x0045, //  6: jmp    x--, 5                     
-    0x8020, //  7: push   block                      
-    0xe008, //  8: set    pins, 8                    
-    0xe08c, //  9: set    pindirs, 12                
+    0x0045, //  6: jmp    x--, 5
+    0x8020, //  7: push   block
+    (0xe000 | PIO_SD),                   //  8: set    pins, SD=HIGH
+    (0xe080 | PIO_SO | PIO_SD),          //  9: set    pindirs, SO|SD=out
     0xbf42, // 10: nop                           [31]
-    0xe02f, // 11: set    x, 15                      
-    0x80a0, // 12: pull   block                      
+    0xe02f, // 11: set    x, 15
+    0x80a0, // 12: pull   block
     0xf000, // 13: set    pins, 0                [16]
     0x6e01, // 14: out    pins, 1                [14]
-    0x004e, // 15: jmp    x--, 14                    
-    0xf008, // 16: set    pins, 8                [16]
-    0xc000, // 17: irq    nowait 0                   
+    0x004e, // 15: jmp    x--, 14
+    (0xf000 | PIO_SD),                   // 16: set    pins, SD=HIGH      [16]
+    0xc000, // 17: irq    nowait 0
     0xbf42, // 18: nop                           [31]
             //     .wrap
 );
@@ -188,7 +202,7 @@ static void link_configureMaster()
 #endif
 
     sm_config_set_out_pins(&sm_config, SD_pin, 1);
-    sm_config_set_set_pins(&sm_config, SC_pin, 4);
+    sm_config_set_set_pins(&sm_config, SC_pin, PIO_SET_COUNT);
     sm_config_set_in_pins(&sm_config, SD_pin);
     sm_config_set_jmp_pin(&sm_config, SD_pin);
 
@@ -235,7 +249,7 @@ static void link_configureSlave()
 #endif
 
     sm_config_set_out_pins(&sm_config, SD_pin, 1);
-    sm_config_set_set_pins(&sm_config, SC_pin, 4);
+    sm_config_set_set_pins(&sm_config, SC_pin, PIO_SET_COUNT);
     sm_config_set_in_pins(&sm_config, SD_pin);
 
     sm_config_set_out_shift(&sm_config, true, false, 0);
