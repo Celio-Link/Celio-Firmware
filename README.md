@@ -20,7 +20,7 @@ This is forked from Celio Firmware from the CelioLink project and adds the funct
 | **GBA Trade Emu** | `0x00` | Emulate a GBA link partner for Pokémon Gen 3 trades |
 | **GBA Link** | `0x01` | Bridge two GBA systems over the internet |
 | **GB Link** | `0x02` | SPI passthrough for Game Boy |
-| **GB Printer** | `0x31` | Game Boy Printer emulation (bit-bang SPI slave) |
+| **GB Printer** | `0x03` | Game Boy Printer emulation (bit-bang SPI slave) |
 | **GBA Passthrough** | `0x04` | Direct GBA link relay |
 
 ---
