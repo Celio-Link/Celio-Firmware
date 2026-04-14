@@ -1,5 +1,4 @@
 
-#include "zephyr/drivers/usb/usb_dc.h"
 #include <cerrno>
 #include <cstdint>
 #include <zephyr/sys/byteorder.h>
@@ -9,6 +8,7 @@
 #include <array>
 #include <algorithm>
 #include <zephyr/kernel.h>
+#include "../hardware.hpp"
 
 #pragma once
 
@@ -39,16 +39,36 @@ public:
     bool sendStatus(std::span<const uint8_t, 2> data)
     {
         if (!m_endpointsEnabled) return false;
-        std::ranges::copy(data, m_sendData.begin());
-        usb_transfer_sync(statusInEndpoint, m_sendData.data(), data.size_bytes(), USB_TRANS_WRITE);
+
+        // Wait for any previous status transfer to complete before staging a new
+        // one.  Without this, back-to-back status messages (e.g. DeviceReady
+        // followed immediately by AwaitMode) race on the same IN endpoint and the
+        // second transfer is silently dropped — breaking GBA online mode.
+        // Timeout of 100 ms avoids blocking forever if the host stops reading.
+        k_sem_take(&m_statusTransferDone, K_MSEC(100));
+
+        std::ranges::copy(data, m_sendStatusData.begin());
+        int ret = usb_transfer(statusInEndpoint, m_sendStatusData.data(), data.size_bytes(),
+            USB_TRANS_WRITE, m_usbWriteStatusCallback, this);
+
+        if (ret != 0) {
+            // Transfer failed to start — release the semaphore so the next call
+            // isn't stuck waiting for a callback that will never fire.
+            k_sem_give(&m_statusTransferDone);
+            return false;
+        }
         return true;
     }
 
-    bool sendData(std::span<const uint8_t> data) 
+    bool sendData(std::span<const uint8_t> data)
     {
         if (!m_endpointsEnabled) return false;
         std::ranges::copy(data, m_sendData.begin());
-        return usb_transfer(dataInEndpoint, m_sendData.data(), data.size_bytes(), USB_TRANS_WRITE, m_usbWriteDataCallback, this) == 0;
+        // usb_transfer is async (queues a k_work item), but with bInterval=1 on
+        // the data endpoint the host polls every 1 ms, so the work-queue delay
+        // is absorbed within the next poll cycle and has no meaningful impact.
+        return usb_transfer(dataInEndpoint, m_sendData.data(), data.size_bytes(),
+            USB_TRANS_WRITE, m_usbWriteDataCallback, this) == 0;
     }
 
     void setReceiveCommandHandler(const UsbReceiveHandler& handler, void* userData)
@@ -71,6 +91,7 @@ public:
         {
         case USB_DC_CONFIGURED:
             m_endpointsEnabled = true;
+            Hardware::getInstance().setLED(0, 5, 0, true); // Green = USB connected, no active mode
             break;
         case USB_DC_ERROR: 
             [[fallthrough]];
@@ -80,6 +101,7 @@ public:
             [[fallthrough]];
         case USB_DC_UNKNOWN:
             m_endpointsEnabled = false;
+            Hardware::getInstance().setLED(5, 0, 0, true); // Red = power on, no USB
             break;
 
         case USB_DC_CONNECTED:
@@ -119,12 +141,16 @@ private:
 
     int perpareNextReceive(ReceiveDelegate& delegate)
     {
+        delegate.endpointBuffer.fill(0);
         return usb_transfer(delegate.endpoint, delegate.endpointBuffer.data(), delegate.endpointBuffer.size(), USB_TRANS_READ, m_usbReadCallback, &delegate);
     }
 
-    void receive(size_t size, ReceiveDelegate* delegate)
+    void receive(int size, ReceiveDelegate* delegate)
     {
-        (*delegate)(std::span(delegate->endpointBuffer.begin(), size));
+        if (size > 0)
+        {
+            (*delegate)(std::span(delegate->endpointBuffer.begin(), static_cast<size_t>(size)));
+        }
         perpareNextReceive(*delegate);
     }; 
 
@@ -143,12 +169,15 @@ private:
     };
     
     std::array<uint8_t, m_endpointSize> m_sendData = {};
+    std::array<uint8_t, 2> m_sendStatusData = {};  // Separate buffer for status to avoid race
+    struct k_sem m_statusTransferDone;
 
-    UsbLayer() 
+    UsbLayer()
     {
         perpareNextReceive(m_receiveCommandHandler);
         perpareNextReceive(m_receiveDataCommandHandler);
         k_sem_init(&m_waitForFreeEndpoint, 1, 1);
+        k_sem_init(&m_statusTransferDone, 1, 1);  // starts at 1 so first sendStatus can proceed
         k_msgq_init(&m_statusMsgQueue, m_statusQueueBuffer.data(), 2, m_statusQueueBuffer.size() / 2);
     }
 
@@ -159,4 +188,10 @@ private:
     }
 
     static void m_usbWriteDataCallback(uint8_t ep, int size, void* userData){ }
+
+    static void m_usbWriteStatusCallback(uint8_t ep, int size, void* userData)
+    {
+        UsbLayer* self = static_cast<UsbLayer*>(userData);
+        k_sem_give(&self->m_statusTransferDone);
+    }
 };

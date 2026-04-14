@@ -19,6 +19,10 @@ enum class LinkStatus : uint16_t
     DeviceReady = 0xFF08,
     EmuTradeSessionFinished = 0xFF09,
 
+    GBModeActive = 0xFF0A,
+    GBPrinterModeActive = 0xFF0B,
+    GBSessionFinished = 0xFF0C,
+
     StatusDebug = 0xFFFF
 };
 

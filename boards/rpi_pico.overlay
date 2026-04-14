@@ -12,6 +12,10 @@
     };
 };
 
+&pio1 {
+    status = "okay";
+};
+
 &pinctrl {
     pio0_pin_default: pio0_pin_default {
         link_pins {

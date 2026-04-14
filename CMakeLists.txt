@@ -7,12 +7,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # The `REQUIRED HINTS $ENV{ZEPHYR_BASE}` is optional in case you're not using `west zephyr-export`
 # https://docs.zephyrproject.org/latest/develop/west/zephyr-cmds.html#installing-cmake-packages-west-zephyr-export
 
-#set(ZEPHYR_MODULES "${CMAKE_SOURCE_DIR}/modules/hal/stm32" "${CMAKE_SOURCE_DIR}/modules/hal/cmsis")
-set(ZEPHYR_MODULES "${CMAKE_SOURCE_DIR}/modules/hal/rpi_pico" "${CMAKE_SOURCE_DIR}/modules/hal/cmsis")
+# Only set ZEPHYR_MODULES manually if modules are vendored locally.
+# When building with west, modules are discovered automatically.
+if(EXISTS "${CMAKE_SOURCE_DIR}/modules/hal/rpi_pico")
+    set(ZEPHYR_MODULES "${CMAKE_SOURCE_DIR}/modules/hal/rpi_pico" "${CMAKE_SOURCE_DIR}/modules/hal/cmsis")
+endif()
 
-set(BOARD rpi_pico)
-
-find_package(Zephyr REQUIRED HINTS "${CMAKE_SOURCE_DIR}/zephyr")
+find_package(Zephyr REQUIRED HINTS "${CMAKE_SOURCE_DIR}/zephyr" $ENV{ZEPHYR_BASE})
 
 
 project(
@@ -27,6 +28,7 @@ target_sources(
     app
     PRIVATE
     src/main.cpp
+    src/hardware.cpp
 )
 
 set_compiler_property(PROPERTY diagnostic -fdiagnostics-color=never)
