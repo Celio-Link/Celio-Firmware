@@ -1,5 +1,6 @@
 
 #include "awSection.hpp"
+#include "../layers/transport.hpp"
 
 // TX queue: USB → GBA (filled by USB handler, drained by PIO ISR)
 K_MSGQ_DEFINE(g_awTxQueue, 2, 256, 2);
@@ -97,7 +98,7 @@ void AwSection::flushRxBuffer()
 
     if (!emptyPacket)
     {
-        UsbLayer::getInstance().sendData(
+        Transport::sendData(
             std::span(reinterpret_cast<const uint8_t*>(m_rxPacket.data()), 64)
         );
     }

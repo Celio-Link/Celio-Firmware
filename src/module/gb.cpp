@@ -2,6 +2,7 @@
 #include "../linkStatus.hpp"
 #include "../hardware.hpp"
 #include "../layers/usbLayer.hpp"
+#include "../layers/transport.hpp"
 extern "C"
 {
     #include "../layers/gbLinkLayer.h"
@@ -106,8 +107,7 @@ void GBModule::execute()
     // Blue = GB/GBC mode
     Hardware::getInstance().setLED(0, 0, 5, true);
 
-    // Set USB data handler
-    UsbLayer::getInstance().setReceiveDataHandler(usbDataHandler, this);
+    Transport::registerDataHandler(usbDataHandler, this);
 
     sendLinkStatus(LinkStatus::GBModeActive);
 
@@ -141,8 +141,7 @@ void GBModule::execute()
     // Cleanup: deinit GB PIO so GBA can reclaim pio0
     gb_link_deinit();
 
-    // Clear USB data handler
-    UsbLayer::getInstance().setReceiveDataHandler(nullptr, nullptr);
+    Transport::registerDataHandler(nullptr, nullptr);
 }
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
@@ -222,9 +221,8 @@ void GBModule::normalModeLoop()
             }
         }
 
-        // Send response back via USB
-        UsbLayer::getInstance().sendData(
-            std::span<const uint8_t>(rxBuf, totalProcessed));
+        // Send response back via the active transport
+        Transport::sendData(std::span<const uint8_t>(rxBuf, totalProcessed));
     }
 }
 
@@ -289,13 +287,15 @@ void GBModule::printerModeLoop()
 
     auto flushUsbBuf = [&]() {
         if (usbBufPos == 0) return;
-        // Retry in case the endpoint is still busy from a previous transfer
+        // Retry in case the transport is still busy (USB endpoint queued, or
+        // serial ring buffer full)
         for (int attempt = 0; attempt < 20; attempt++) {
-            if (UsbLayer::getInstance().sendData(
+            if (Transport::sendData(
                     std::span<const uint8_t>(usbBuf, usbBufPos))) {
                 break;
             }
-            // Endpoint busy — yield to let the work queue drain
+            // Busy — yield to let the work queue drain (USB) or TX IRQ drain
+            // the ring buffer (serial)
             k_yield();
         }
         usbBufPos = 0;
@@ -345,7 +345,7 @@ void GBModule::printerModeLoop()
 
                     // Send "ABORTPRINT" to browser
                     const char* abort_marker = "ABORTPRINT";
-                    UsbLayer::getInstance().sendData(
+                    Transport::sendData(
                         std::span<const uint8_t>(
                             reinterpret_cast<const uint8_t*>(abort_marker), 10));
                     k_yield();

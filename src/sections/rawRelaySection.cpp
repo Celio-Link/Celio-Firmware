@@ -1,5 +1,6 @@
 
 #include "rawRelaySection.hpp"
+#include "../layers/transport.hpp"
 
 // TX queue: USB → GBA (filled by USB handler, drained by PIO ISR)
 // Element size = 2 bytes (one uint16_t), depth = 256
@@ -75,7 +76,7 @@ void RawRelaySection::process()
 
 void RawRelaySection::flushRxBuffer()
 {
-    UsbLayer::getInstance().sendData(
+    Transport::sendData(
         std::span(reinterpret_cast<const uint8_t*>(m_rxPacket.data()), 64)
     );
 

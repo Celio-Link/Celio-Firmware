@@ -1,4 +1,6 @@
 #include "layers/usbLayer.hpp"
+#include "layers/serialLayer.hpp"
+#include "layers/transport.hpp"
 #include "layers/packetLayer.hpp"
 #include "module/link.hpp"
 #include "module/emu.hpp"
@@ -39,7 +41,7 @@ class Control
 public:
     Control()
     {
-        UsbLayer::getInstance().setReceiveCommandHandler(receiveCommandHandler, this);
+        Transport::registerCommandHandler(receiveCommandHandler, this);
 
         k_sem_init(&m_waitForModeSemaphore, 0, 1);
     }
@@ -57,7 +59,7 @@ public:
                 link_detectCableType();
 
                 party::partyInit();
-                UsbLayer::getInstance().setReceiveDataHandler(party::usbReceivePkmFile, nullptr);
+                Transport::registerDataHandler(party::usbReceivePkmFile, nullptr);
 
                 EmuModule emuModule;
                 m_currentModule = &emuModule;
@@ -72,7 +74,7 @@ public:
                 Hardware::getInstance().setLED(5, 5, 0, true); // Yellow = GBA mode
                 link_detectCableType();
 
-                UsbLayer::getInstance().setReceiveDataHandler(usbLink_receiveHandler, nullptr);
+                Transport::registerDataHandler(usbLink_receiveHandler, nullptr);
 
                 LinkModule linkModule;
                 m_currentModule = &linkModule;
@@ -107,7 +109,7 @@ public:
                 Hardware::getInstance().setLED(0, 5, 5, true); // Cyan = Advance Wars mode
                 link_detectCableType();
 
-                UsbLayer::getInstance().setReceiveDataHandler(awRelay_receiveHandler, nullptr);
+                Transport::registerDataHandler(awRelay_receiveHandler, nullptr);
 
                 AdvanceWarsModule advanceWarsModule;
                 m_currentModule = &advanceWarsModule;
@@ -209,8 +211,7 @@ private:
             FW_VERSION_MINOR,
             FW_VERSION_PATCH
         };
-        UsbLayer::getInstance().sendData(
-            std::span<const uint8_t>(info, sizeof(info)));
+        Transport::sendData(std::span<const uint8_t>(info, sizeof(info)));
     }
 
     //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//

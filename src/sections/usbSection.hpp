@@ -1,6 +1,7 @@
 
 #include "../layers/packetLayer.hpp"
 #include "../layers/usbLayer.hpp"
+#include "../layers/transport.hpp"
 
 #include <algorithm>
 #include <cstdint>
@@ -83,7 +84,7 @@ private:
         
         if (!emptyCommands)
         {
-            UsbLayer::getInstance().sendData(std::span(reinterpret_cast<const uint8_t*>(m_packets.data()), 64));
+            Transport::sendData(std::span(reinterpret_cast<const uint8_t*>(m_packets.data()), 64));
         }
 
         std::memset(reinterpret_cast<uint8_t*>(m_packets.data()), 0x00, 64);

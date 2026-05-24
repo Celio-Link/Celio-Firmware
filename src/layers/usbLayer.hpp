@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <zephyr/kernel.h>
 #include "../hardware.hpp"
+#include "transport.hpp"
 
 #pragma once
 
@@ -149,10 +150,11 @@ private:
     {
         if (size > 0)
         {
+            Transport::setActive(Transport::Id::Usb);
             (*delegate)(std::span(delegate->endpointBuffer.begin(), static_cast<size_t>(size)));
         }
         perpareNextReceive(*delegate);
-    }; 
+    };
 
     ReceiveDelegate m_receiveCommandHandler = {
         .userData = nullptr,
