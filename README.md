@@ -104,5 +104,5 @@ Commands are sent over the WebUSB command endpoint:
 ## Troubleshooting
 
 - When refreshing the web page, the USB device may need to be reset (unplug or press reset button).
-- On Linux, you may need to edit udev rules: https://stackoverflow.com/questions/30983221
+- On Linux, run `./scripts/setup-permissions.sh` once to install udev rules so the browser can access the adapter without sudo (covers both WebUSB and WebSerial).
 - In rare cases, the firmware may not respond to a mode-switch command — reconnect the device.
