@@ -37,7 +37,6 @@ void SerialLayer::initIfNeeded()
     uart_irq_rx_enable(m_dev);
     m_ready = true;
 #else
-    // CDC-ACM not configured in this build — SerialLayer stays inert.
     m_dev = nullptr;
 #endif
 }
@@ -55,17 +54,16 @@ void SerialLayer::onUartIrq()
 
         if (uart_irq_tx_ready(m_dev))
         {
-            uint8_t txBuf[64];
-            uint32_t taken = ring_buf_get(&m_txRing, txBuf, sizeof(txBuf));
-            if (taken == 0) {
+            // ring_buf_get_claim/finish (rather than get + put-back) keeps
+            // byte order intact if the UART FIFO can only accept part of
+            // the chunk we offered.
+            uint8_t* tx_ptr;
+            uint32_t claimed = ring_buf_get_claim(&m_txRing, &tx_ptr, 64);
+            if (claimed == 0) {
                 uart_irq_tx_disable(m_dev);
             } else {
-                int written = uart_fifo_fill(m_dev, txBuf, taken);
-                if (written < static_cast<int>(taken)) {
-                    // Re-enqueue the tail; safe without locking — this IRQ is
-                    // the sole consumer of the ring.
-                    ring_buf_put(&m_txRing, txBuf + written, taken - written);
-                }
+                int written = uart_fifo_fill(m_dev, tx_ptr, claimed);
+                ring_buf_get_finish(&m_txRing, written > 0 ? written : 0);
             }
         }
     }

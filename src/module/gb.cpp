@@ -277,37 +277,50 @@ void GBModule::printerModeLoop()
     const uint32_t PRINT_ABORT_TIMEOUT = 2000000;
 
     // --- USB send buffer ---
-    // Buffer protocol bytes and send in batches for reliable USB transfer.
-    // UsbLayer::sendData() uses a single shared buffer and async usb_transfer()
-    // via Zephyr's work queue.  The bit-bang loop must yield periodically so the
-    // system work queue can actually process the queued transfers; without this
-    // the CPU is monopolised by the bit-bang loop and no data ever reaches the host.
-    uint8_t usbBuf[64];
-    uint8_t usbBufPos = 0;
+    // WebUSB keeps its original behaviour: bytes flush in 64-byte chunks
+    // mid-packet and again at every protocol-packet boundary, so the host
+    // sees a continuous stream.
+    //
+    // WebSerial defers all sending until PRINT (0x02) is received. The
+    // bit-bang loop gets zero IRQ contention from USB during image capture,
+    // so SIN sampling stays clean. At PRINT, the whole accumulated image
+    // ships in one burst during the GB's natural post-PRINT pause.
+    //
+    // Buffer sized to hold a full 9-strip image plus protocol overhead.
+    static uint8_t usbBuf[16384];
+    uint16_t usbBufPos = 0;
 
     auto flushUsbBuf = [&]() {
         if (usbBufPos == 0) return;
-        // Retry in case the transport is still busy (USB endpoint queued, or
-        // serial ring buffer full)
-        for (int attempt = 0; attempt < 20; attempt++) {
-            if (Transport::sendData(
-                    std::span<const uint8_t>(usbBuf, usbBufPos))) {
-                break;
+        // Chunk into 64-byte sends (transport per-call cap), retrying with
+        // yields per chunk so the consumer can drain.
+        uint16_t sent = 0;
+        while (sent < usbBufPos) {
+            uint16_t chunk = (usbBufPos - sent) > 64 ? 64 : (usbBufPos - sent);
+            bool ok = false;
+            for (int attempt = 0; attempt < 20; attempt++) {
+                if (Transport::sendData(
+                        std::span<const uint8_t>(usbBuf + sent, chunk))) {
+                    ok = true;
+                    break;
+                }
+                k_yield();
             }
-            // Busy — yield to let the work queue drain (USB) or TX IRQ drain
-            // the ring buffer (serial)
+            if (!ok) break;
+            sent += chunk;
             k_yield();
         }
         usbBufPos = 0;
-        // Yield so the system work queue can execute the usb_transfer work item.
-        // This is essential: without it the work item stays queued forever because
-        // the bit-bang loop never blocks or sleeps.
-        k_yield();
     };
 
     auto bufferUsbByte = [&](uint8_t b) {
-        usbBuf[usbBufPos++] = b;
-        if (usbBufPos >= sizeof(usbBuf)) {
+        if (usbBufPos < sizeof(usbBuf)) {
+            usbBuf[usbBufPos++] = b;
+        }
+        // USB streams every 64 bytes as before. WebSerial accumulates the
+        // whole image and flushes once at PRINT to keep IRQs off the
+        // bit-bang loop during clocking.
+        if (usbBufPos >= 64 && Transport::active() == Transport::Id::Usb) {
             flushUsbBuf();
         }
     };
@@ -331,19 +344,13 @@ void GBModule::printerModeLoop()
                     goto exit_printer;
                 }
 
-                // If we timed out mid-packet, the print was aborted
                 if (state != GB_WAIT_FOR_SYNC_1 && state != GB_WAIT_FOR_SYNC_2) {
-                    // Reset state machine
                     state = GB_WAIT_FOR_SYNC_1;
                     bit_synced = false;
                     received_data = 0;
                     received_bits = 0;
                     send_data = 0x00;
-
-                    // Discard any buffered data from the aborted packet
                     usbBufPos = 0;
-
-                    // Send "ABORTPRINT" to browser
                     const char* abort_marker = "ABORTPRINT";
                     Transport::sendData(
                         std::span<const uint8_t>(
@@ -353,7 +360,6 @@ void GBModule::printerModeLoop()
                 }
 
                 idle_count = 0;
-                // Yield periodically during idle to keep USB responsive
                 k_yield();
             }
         }
@@ -476,11 +482,12 @@ void GBModule::printerModeLoop()
 
                 if (command == 0x02) {  // PRINT command
                     bufferUsbByte(0xFE);  // Print marker
+                    flushUsbBuf();        // Always flush at PRINT (both transports)
+                } else if (Transport::active() == Transport::Id::Usb) {
+                    // WebUSB: original behaviour, flush at every protocol packet.
+                    flushUsbBuf();
                 }
-                // Flush at protocol packet boundary — the Game Boy pauses
-                // between packets while it processes the response, giving us
-                // ample time to drain USB data to the host.
-                flushUsbBuf();
+                // WebSerial + non-PRINT: keep accumulating in usbBuf.
                 break;
         }
     }
