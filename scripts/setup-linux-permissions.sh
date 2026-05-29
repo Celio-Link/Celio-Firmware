@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Install udev rules so any local user can open the GBLink adapter via
-# WebUSB or WebSerial without sudo. Covers both the Zephyr firmware
-# (VID 0x2FE3) and the reconfigurable firmware (VID 0xCAFE), and tells
-# ModemManager not to probe the CDC-ACM port.
+# WebUSB or WebSerial without sudo. Covers the Zephyr firmware
+# (VID 0x2FE3), the reconfigurable firmware (VID 0xCAFE), and the
+# RP2040/RP2350 bootrom (VID 0x2E8A) used when flashing in BOOTSEL mode,
+# and tells ModemManager not to probe the CDC-ACM port.
 #
 # After installing the rules, if any flatpak browsers are detected, offers
 # to grant them `--device=all` so the sandbox can see the adapter. On
@@ -148,9 +149,12 @@ fi
 cat >"$RULES_PATH" <<'EOF'
 # GBLink adapter — WebUSB (vendor interface) + WebSerial (CDC-ACM).
 # Covers Zephyr firmware (VID 0x2FE3) and reconfigurable firmware (VID 0xCAFE).
+# Also covers the RP2040/RP2350 bootrom (VID 0x2E8A) in BOOTSEL mode, so the
+# board can be flashed over WebUSB (e.g. picoflash) without sudo.
 
 SUBSYSTEM=="usb", ATTRS{idVendor}=="2fe3", MODE="0666"
 SUBSYSTEM=="usb", ATTRS{idVendor}=="cafe", MODE="0666"
+SUBSYSTEM=="usb", ATTRS{idVendor}=="2e8a", MODE="0666"
 
 SUBSYSTEM=="tty", ATTRS{idVendor}=="2fe3", MODE="0666", ENV{ID_MM_DEVICE_IGNORE}="1"
 SUBSYSTEM=="tty", ATTRS{idVendor}=="cafe", MODE="0666", ENV{ID_MM_DEVICE_IGNORE}="1"
