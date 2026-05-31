@@ -30,6 +30,7 @@ This is forked from Celio Firmware from the CelioLink project and adds the funct
 * **USB Adapter Board:** Raspberry Pi Pico or Waveshare RP2040-Zero, Solderless board in development. Pre built DIY adapter or kits are avalible on Etsy. https://www.etsy.com/listing/1517956485/gb-link-usb-to-gameboy-link-adapter-for 
 
 Existing open source PCB designs
+
 Pico PCB: https://github.com/agtbaskara/game-boy-pico-link-board
 Pico Zero PCB: https://github.com/weimanc/game-boy-zero-link-board
 
