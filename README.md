@@ -32,6 +32,7 @@ This is forked from Celio Firmware from the CelioLink project and adds the funct
 Existing open source PCB designs
 
 Pico PCB: https://github.com/agtbaskara/game-boy-pico-link-board
+
 Pico Zero PCB: https://github.com/weimanc/game-boy-zero-link-board
 
 ### Wiring Guide
