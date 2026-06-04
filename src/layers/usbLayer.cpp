@@ -1,4 +1,5 @@
 #include "usbLayer.hpp"
+#include "../persist.hpp"
 
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/usb/usb_device.h>
@@ -163,11 +164,13 @@ namespace
     /* Number of allowed origins */
     #define NUMBER_OF_ALLOWED_ORIGINS   1
 
-    /* URL Descriptor: https://wicg.github.io/webusb/#url-descriptor */
+    /* URL Descriptor: https://wicg.github.io/webusb/#url-descriptor
+     * Chrome only surfaces the landing-page notification for https URLs, so the
+     * scheme must be 1 (https). bLength = 3 (header) + strlen("launcher.gblink.io"). */
     static const uint8_t webusb_origin_url[] = {
-        /* Length, DescriptorType, Scheme */
-        0x11, 0x03, 0x00,
-        'l', 'o', 'c', 'a', 'l', 'h', 'o', 's', 't', ':', '8', '0', '0', '0'
+        /* Length, DescriptorType, Scheme (1 = https) */
+        0x15, 0x03, 0x01,
+        'l', 'a', 'u', 'n', 'c', 'h', 'e', 'r', '.', 'g', 'b', 'l', 'i', 'n', 'k', '.', 'i', 'o'
     };
 
     /* Predefined response to control commands related to MS OS 1.0 descriptors
@@ -301,40 +304,39 @@ namespace
             .bInterfaceProtocol = 0,
             .iInterface = 0
         },
+        // Bulk endpoints — RP2040's legacy USB stack misbehaves with mixed
+        // interrupt + bulk in a composite (vendor + CDC) configuration.
         .if0_in_ep_data = {
             .bLength = sizeof(struct usb_ep_descriptor),
             .bDescriptorType = USB_DESC_ENDPOINT,
             .bEndpointAddress = AUTO_EP_IN | 0x1,
-            .bmAttributes = USB_DC_EP_INTERRUPT,
+            .bmAttributes = USB_DC_EP_BULK,
             .wMaxPacketSize = sys_cpu_to_le16(UsbLayer::endpointSize()),
-            // 1 ms poll rate (minimum for full-speed interrupt endpoints).
-            // Was 50 ms — the host was waiting up to 50 ms per IN packet,
-            // making multiboot transfers ~50x slower than necessary.
-            .bInterval = 1
+            .bInterval = 0
         },
         .if0_out_ep_data = {
             .bLength = sizeof(struct usb_ep_descriptor),
             .bDescriptorType = USB_DESC_ENDPOINT,
             .bEndpointAddress = AUTO_EP_OUT | 0x1,
-            .bmAttributes = USB_DC_EP_INTERRUPT,
+            .bmAttributes = USB_DC_EP_BULK,
             .wMaxPacketSize = sys_cpu_to_le16(UsbLayer::endpointSize()),
-            .bInterval = 1  // match IN endpoint
+            .bInterval = 0
         },
         .if0_in_ep_command = {
             .bLength = sizeof(struct usb_ep_descriptor),
             .bDescriptorType = USB_DESC_ENDPOINT,
             .bEndpointAddress = AUTO_EP_IN | 0x2,
-            .bmAttributes = USB_DC_EP_INTERRUPT,
+            .bmAttributes = USB_DC_EP_BULK,
             .wMaxPacketSize = sys_cpu_to_le16(UsbLayer::endpointSize()),
-            .bInterval = 1
+            .bInterval = 0
         },
         .if0_out_ep_command = {
             .bLength = sizeof(struct usb_ep_descriptor),
             .bDescriptorType = USB_DESC_ENDPOINT,
             .bEndpointAddress = AUTO_EP_OUT | 0x2,
-            .bmAttributes = USB_DC_EP_INTERRUPT,
+            .bmAttributes = USB_DC_EP_BULK,
             .wMaxPacketSize = sys_cpu_to_le16(UsbLayer::endpointSize()),
-            .bInterval = 1
+            .bInterval = 0
         }
     };
 
@@ -392,6 +394,11 @@ namespace
 
     static int usb_init()
     {
+        // Advertise the WebUSB landing page only if the user hasn't turned it
+        // off. The host reads this at enumeration, so the toggle takes effect on
+        // the next reconnect.
+        bos_cap_webusb.cap.iLandingPage = landingPageEnabled() ? 0x01 : 0x00;
+
         usb_bos_register_cap((void *)&bos_cap_webusb);
 	    usb_bos_register_cap((void *)&bos_cap_msosv2);
 	    usb_bos_register_cap((void *)&bos_cap_lpm);

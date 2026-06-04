@@ -1,7 +1,9 @@
 #include "gb.hpp"
 #include "../linkStatus.hpp"
 #include "../hardware.hpp"
+#include "../persist.hpp"
 #include "../layers/usbLayer.hpp"
+#include "../layers/transport.hpp"
 extern "C"
 {
     #include "../layers/gbLinkLayer.h"
@@ -103,11 +105,9 @@ void GBModule::execute()
     // Initialize GB 8-bit SPI PIO on pio0
     gb_link_init();
 
-    // Blue = GB/GBC mode
-    Hardware::getInstance().setLED(0, 0, 5, true);
+    applyLedForSlot(LED_SLOT_GBC); // GB/GBC mode
 
-    // Set USB data handler
-    UsbLayer::getInstance().setReceiveDataHandler(usbDataHandler, this);
+    Transport::registerDataHandler(usbDataHandler, this);
 
     sendLinkStatus(LinkStatus::GBModeActive);
 
@@ -121,7 +121,7 @@ void GBModule::execute()
 
             case SubMode::printer:
                 sendLinkStatus(LinkStatus::GBPrinterModeActive);
-                Hardware::getInstance().setLED(5, 0, 5, true); // Purple = printer sub-mode
+                applyLedForSlot(LED_SLOT_PRINTER); // printer sub-mode
                 
                 // Disable PIO SPI for GPIO bit-bang printer mode
                 gb_link_deinit();
@@ -131,7 +131,7 @@ void GBModule::execute()
                 // Re-enable PIO SPI
                 gb_link_init();
                 
-                Hardware::getInstance().setLED(0, 0, 5, true); // Back to blue (GB mode)
+                applyLedForSlot(LED_SLOT_GBC); // back to GB mode
                 m_subMode = SubMode::normal;
                 sendLinkStatus(LinkStatus::GBModeActive);
                 break;
@@ -141,8 +141,7 @@ void GBModule::execute()
     // Cleanup: deinit GB PIO so GBA can reclaim pio0
     gb_link_deinit();
 
-    // Clear USB data handler
-    UsbLayer::getInstance().setReceiveDataHandler(nullptr, nullptr);
+    Transport::registerDataHandler(nullptr, nullptr);
 }
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
@@ -160,15 +159,13 @@ void GBModule::executePrinterMode()
 
     // No gb_link_init() — printer mode uses GPIO bit-bang, not PIO SPI
 
-    // Purple = printer mode
-    Hardware::getInstance().setLED(5, 0, 5, true);
+    applyLedForSlot(LED_SLOT_PRINTER); // printer mode
 
     sendLinkStatus(LinkStatus::GBPrinterModeActive);
 
     printerModeLoop();
 
-    // Back to green (connected, no active mode)
-    Hardware::getInstance().setLED(0, 5, 0, true);
+    applyLedForSlot(LED_SLOT_IDLE); // connected, no active mode
 }
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
@@ -222,9 +219,8 @@ void GBModule::normalModeLoop()
             }
         }
 
-        // Send response back via USB
-        UsbLayer::getInstance().sendData(
-            std::span<const uint8_t>(rxBuf, totalProcessed));
+        // Send response back via the active transport
+        Transport::sendData(std::span<const uint8_t>(rxBuf, totalProcessed));
     }
 }
 
@@ -279,35 +275,50 @@ void GBModule::printerModeLoop()
     const uint32_t PRINT_ABORT_TIMEOUT = 2000000;
 
     // --- USB send buffer ---
-    // Buffer protocol bytes and send in batches for reliable USB transfer.
-    // UsbLayer::sendData() uses a single shared buffer and async usb_transfer()
-    // via Zephyr's work queue.  The bit-bang loop must yield periodically so the
-    // system work queue can actually process the queued transfers; without this
-    // the CPU is monopolised by the bit-bang loop and no data ever reaches the host.
-    uint8_t usbBuf[64];
-    uint8_t usbBufPos = 0;
+    // WebUSB keeps its original behaviour: bytes flush in 64-byte chunks
+    // mid-packet and again at every protocol-packet boundary, so the host
+    // sees a continuous stream.
+    //
+    // WebSerial defers all sending until PRINT (0x02) is received. The
+    // bit-bang loop gets zero IRQ contention from USB during image capture,
+    // so SIN sampling stays clean. At PRINT, the whole accumulated image
+    // ships in one burst during the GB's natural post-PRINT pause.
+    //
+    // Buffer sized to hold a full 9-strip image plus protocol overhead.
+    static uint8_t usbBuf[16384];
+    uint16_t usbBufPos = 0;
 
     auto flushUsbBuf = [&]() {
         if (usbBufPos == 0) return;
-        // Retry in case the endpoint is still busy from a previous transfer
-        for (int attempt = 0; attempt < 20; attempt++) {
-            if (UsbLayer::getInstance().sendData(
-                    std::span<const uint8_t>(usbBuf, usbBufPos))) {
-                break;
+        // Chunk into 64-byte sends (transport per-call cap), retrying with
+        // yields per chunk so the consumer can drain.
+        uint16_t sent = 0;
+        while (sent < usbBufPos) {
+            uint16_t chunk = (usbBufPos - sent) > 64 ? 64 : (usbBufPos - sent);
+            bool ok = false;
+            for (int attempt = 0; attempt < 20; attempt++) {
+                if (Transport::sendData(
+                        std::span<const uint8_t>(usbBuf + sent, chunk))) {
+                    ok = true;
+                    break;
+                }
+                k_yield();
             }
-            // Endpoint busy — yield to let the work queue drain
+            if (!ok) break;
+            sent += chunk;
             k_yield();
         }
         usbBufPos = 0;
-        // Yield so the system work queue can execute the usb_transfer work item.
-        // This is essential: without it the work item stays queued forever because
-        // the bit-bang loop never blocks or sleeps.
-        k_yield();
     };
 
     auto bufferUsbByte = [&](uint8_t b) {
-        usbBuf[usbBufPos++] = b;
-        if (usbBufPos >= sizeof(usbBuf)) {
+        if (usbBufPos < sizeof(usbBuf)) {
+            usbBuf[usbBufPos++] = b;
+        }
+        // USB streams every 64 bytes as before. WebSerial accumulates the
+        // whole image and flushes once at PRINT to keep IRQs off the
+        // bit-bang loop during clocking.
+        if (usbBufPos >= 64 && Transport::active() == Transport::Id::Usb) {
             flushUsbBuf();
         }
     };
@@ -331,21 +342,15 @@ void GBModule::printerModeLoop()
                     goto exit_printer;
                 }
 
-                // If we timed out mid-packet, the print was aborted
                 if (state != GB_WAIT_FOR_SYNC_1 && state != GB_WAIT_FOR_SYNC_2) {
-                    // Reset state machine
                     state = GB_WAIT_FOR_SYNC_1;
                     bit_synced = false;
                     received_data = 0;
                     received_bits = 0;
                     send_data = 0x00;
-
-                    // Discard any buffered data from the aborted packet
                     usbBufPos = 0;
-
-                    // Send "ABORTPRINT" to browser
                     const char* abort_marker = "ABORTPRINT";
-                    UsbLayer::getInstance().sendData(
+                    Transport::sendData(
                         std::span<const uint8_t>(
                             reinterpret_cast<const uint8_t*>(abort_marker), 10));
                     k_yield();
@@ -353,7 +358,6 @@ void GBModule::printerModeLoop()
                 }
 
                 idle_count = 0;
-                // Yield periodically during idle to keep USB responsive
                 k_yield();
             }
         }
@@ -476,11 +480,12 @@ void GBModule::printerModeLoop()
 
                 if (command == 0x02) {  // PRINT command
                     bufferUsbByte(0xFE);  // Print marker
+                    flushUsbBuf();        // Always flush at PRINT (both transports)
+                } else if (Transport::active() == Transport::Id::Usb) {
+                    // WebUSB: original behaviour, flush at every protocol packet.
+                    flushUsbBuf();
                 }
-                // Flush at protocol packet boundary — the Game Boy pauses
-                // between packets while it processes the response, giving us
-                // ample time to drain USB data to the host.
-                flushUsbBuf();
+                // WebSerial + non-PRINT: keep accumulating in usbBuf.
                 break;
         }
     }

@@ -1,5 +1,5 @@
 #include <zephyr/kernel.h>
-#include "./layers/usbLayer.hpp"
+#include "./layers/transport.hpp"
 
 #pragma once
 
@@ -28,5 +28,5 @@ enum class LinkStatus : uint16_t
 
 inline bool sendLinkStatus(LinkStatus status)
 {
-    return UsbLayer::getInstance().sendStatus(std::span<const uint8_t, 2>(reinterpret_cast<const uint8_t*>(&status), 2));
+    return Transport::sendStatus(std::span<const uint8_t, 2>(reinterpret_cast<const uint8_t*>(&status), 2));
 }

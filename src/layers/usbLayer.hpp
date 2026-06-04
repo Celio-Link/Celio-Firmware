@@ -9,6 +9,8 @@
 #include <algorithm>
 #include <zephyr/kernel.h>
 #include "../hardware.hpp"
+#include "../persist.hpp"
+#include "transport.hpp"
 
 #pragma once
 
@@ -91,7 +93,7 @@ public:
         {
         case USB_DC_CONFIGURED:
             m_endpointsEnabled = true;
-            Hardware::getInstance().setLED(0, 5, 0, true); // Green = USB connected, no active mode
+            applyLedForSlot(LED_SLOT_IDLE); // connected, no active mode (user-configurable)
             break;
         case USB_DC_ERROR: 
             [[fallthrough]];
@@ -149,10 +151,11 @@ private:
     {
         if (size > 0)
         {
+            Transport::setActive(Transport::Id::Usb);
             (*delegate)(std::span(delegate->endpointBuffer.begin(), static_cast<size_t>(size)));
         }
         perpareNextReceive(*delegate);
-    }; 
+    };
 
     ReceiveDelegate m_receiveCommandHandler = {
         .userData = nullptr,
