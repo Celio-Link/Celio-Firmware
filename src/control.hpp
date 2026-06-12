@@ -23,10 +23,10 @@ class Control
         GetFirmwareInfo = 0x0F
     };
 
-    // Firmware version: 2.1.2
+    // Firmware version: 2.2.0
     static constexpr uint8_t FW_VERSION_MAJOR = 2;
-    static constexpr uint8_t FW_VERSION_MINOR = 1;
-    static constexpr uint8_t FW_VERSION_PATCH = 2;
+    static constexpr uint8_t FW_VERSION_MINOR = 2;
+    static constexpr uint8_t FW_VERSION_PATCH = 0;
 
     enum class Mode
     {
