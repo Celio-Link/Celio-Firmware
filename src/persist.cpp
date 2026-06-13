@@ -9,7 +9,7 @@ namespace
     #define STORAGE_PARTITION_ID FIXED_PARTITION_ID(storage_partition)
 
     constexpr uint8_t SETTINGS_MAGIC = 0x5A;
-    constexpr uint8_t SETTINGS_VERSION = 4; // bumped to re-default the LED colours
+    constexpr uint8_t SETTINGS_VERSION = 5; // bumped to re-default the LED colours (25% brightness, AW white)
 
     struct PersistSettings
     {
@@ -19,14 +19,14 @@ namespace
         uint8_t led[LED_SLOT_COUNT][3];        // per-slot logical RGB
     };
 
-    // Real-colour defaults at a uniform 50% brightness (128/255) so every mode's
+    // Real-colour defaults at a uniform 25% brightness (64/255) so every mode's
     // brightness slider starts at the same place. WS2812 magnitude = brightness.
     const uint8_t kDefaultColors[LED_SLOT_COUNT][3] = {
-        { 0,   128, 0   }, // idle/connected — green
-        { 128, 128, 0   }, // GBA/Celio — yellow
-        { 0,   0,   128 }, // GB/GBC — blue
-        { 128, 0,   128 }, // printer — purple
-        { 0,   128, 128 }, // Advance Wars — cyan
+        { 0,   64,  0   }, // idle/connected — green
+        { 64,  64,  0   }, // GBA/Celio — yellow
+        { 0,   0,   64  }, // GB/GBC — blue
+        { 64,  0,   64  }, // printer — purple
+        { 64,  64,  64  }, // Advance Wars — white
     };
 
     void fillDefaults(PersistSettings& s)
