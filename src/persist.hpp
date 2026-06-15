@@ -12,7 +12,7 @@ enum LedSlot : uint8_t {
     LED_SLOT_GBA = 1,         // GBA trade/link (yellow)
     LED_SLOT_GBC = 2,         // GB/GBC link (blue)
     LED_SLOT_PRINTER = 3,     // GB printer (purple)
-    LED_SLOT_ADVANCE_WARS = 4,// Advance Wars (cyan)
+    LED_SLOT_ADVANCE_WARS = 4,// Advance Wars (white)
     LED_SLOT_COUNT = 5,
 };
 
