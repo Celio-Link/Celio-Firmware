@@ -13,8 +13,9 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/modules/hal/rpi_pico")
     set(ZEPHYR_MODULES "${CMAKE_SOURCE_DIR}/modules/hal/rpi_pico" "${CMAKE_SOURCE_DIR}/modules/hal/cmsis")
 endif()
 
-find_package(Zephyr REQUIRED HINTS "${CMAKE_SOURCE_DIR}/zephyr" $ENV{ZEPHYR_BASE})
+set(BOARD rpi_pico)
 
+find_package(Zephyr REQUIRED HINTS "${CMAKE_SOURCE_DIR}/zephyr" $ENV{ZEPHYR_BASE})
 
 project(
     EmptyApp
