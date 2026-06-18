@@ -12,6 +12,7 @@
 #include "module/moduleInterface.hpp"
 #include "hardware.hpp"
 #include "persist.hpp"
+#include "firmware_version.hpp"
 
 class Control
 {
@@ -22,11 +23,6 @@ class Control
         EnterGBPrinter = 0x03,
         GetFirmwareInfo = 0x0F
     };
-
-    // Firmware version: 2.2.0
-    static constexpr uint8_t FW_VERSION_MAJOR = 2;
-    static constexpr uint8_t FW_VERSION_MINOR = 2;
-    static constexpr uint8_t FW_VERSION_PATCH = 0;
 
     enum class Mode
     {
@@ -273,9 +269,9 @@ private:
     {
         const uint8_t info[] = {
             0x0F, // Echo back the command ID so web app knows this is a firmware info response
-            FW_VERSION_MAJOR,
-            FW_VERSION_MINOR,
-            FW_VERSION_PATCH,
+            fw::versionMajor,
+            fw::versionMinor,
+            fw::versionPatch,
             // Byte 4: WebUSB landing-page enabled (1) / disabled (0). Older web
             // apps simply ignore the extra byte.
             static_cast<uint8_t>(landingPageEnabled() ? 1 : 0)

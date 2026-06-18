@@ -11,16 +11,21 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # softprops/action-gh-release updates the release to attach the .uf2, which
+    # needs write access to repo contents. The default GITHUB_TOKEN is read-only,
+    # hence "Resource not accessible by integration" without this.
+    permissions:
+      contents: write
     env:
       ZEPHYR_SDK_VERSION: 0.16.8
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           path: gblink-firmware
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
@@ -49,17 +54,32 @@ jobs:
       - name: Build firmware
         run: west build -b rpi_pico gblink-firmware
 
-      - name: Rename firmware
-        run: cp build/zephyr/zephyr.uf2 gblink.uf2
+      - name: Package firmware
+        id: pkg
+        # Derive the version from firmware_version.hpp (the single source of
+        # truth that also feeds GetFirmwareInfo and bcdDevice), so the file name
+        # always matches what the device reports, on every trigger.
+        run: |
+          major=$(grep -oP 'versionMajor\s*=\s*\K[0-9]+' gblink-firmware/src/firmware_version.hpp)
+          minor=$(grep -oP 'versionMinor\s*=\s*\K[0-9]+' gblink-firmware/src/firmware_version.hpp)
+          patch=$(grep -oP 'versionPatch\s*=\s*\K[0-9]+' gblink-firmware/src/firmware_version.hpp)
+          ver="v${major}.${minor}.${patch}"
+          name="gblink.${ver}.uf2"
+          cp build/zephyr/zephyr.uf2 "$name"
+          echo "version=$ver" >> "$GITHUB_OUTPUT"
+          echo "file=$name" >> "$GITHUB_OUTPUT"
+          echo "Packaged $name"
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: gblink-firmware
-          path: gblink.uf2
+          name: gblink.${{ steps.pkg.outputs.version }}
+          path: ${{ steps.pkg.outputs.file }}
 
       - name: Attach to Release
         if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
-          files: gblink.uf2
+          files: |
+            ${{ steps.pkg.outputs.file }}
+            gblink-firmware/scripts/setup-linux-permissions.sh
