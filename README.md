@@ -38,7 +38,10 @@ Manual update
 
 ## Hardware Required
 
-* **USB Adapter Board:** Raspberry Pi Pico or Waveshare RP2040-Zero, Solderless board in development. Pre built DIY adapter or kits are avalible on Etsy. https://www.etsy.com/listing/1517956485/gb-link-usb-to-gameboy-link-adapter-for 
+* **USB Adapter:** Assembled v2 hardware from Crowd Supply or DIY PCBs.
+
+Crowd Supply: https://www.crowdsupply.com/gblink/gblink-usb-v2
+
 
 Existing open source PCB designs
 
