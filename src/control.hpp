@@ -1,7 +1,4 @@
-#include "layers/usbLayer.hpp"
-#include "layers/serialLayer.hpp"
-#include "layers/transport.hpp"
-#include "layers/packetLayer.hpp"
+#include "layers/transport/transport.hpp"
 #include "module/link.hpp"
 #include "module/emu.hpp"
 #include "module/gb.hpp"

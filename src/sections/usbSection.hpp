@@ -1,7 +1,6 @@
 
 #include "../layers/packetLayer.hpp"
-#include "../layers/usbLayer.hpp"
-#include "../layers/transport.hpp"
+#include "../layers/transport/transport.hpp"
 
 #include <algorithm>
 #include <cstdint>

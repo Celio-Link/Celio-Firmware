@@ -7,7 +7,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/ring_buffer.h>
 
-#include "transport.hpp"
+#include "../transport.hpp"
 
 // CDC-ACM transport. Mirrors UsbLayer's handler shapes so the rest of the
 // firmware sees the same per-packet API regardless of which transport

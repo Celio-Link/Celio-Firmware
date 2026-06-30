@@ -8,9 +8,9 @@
 #include <array>
 #include <algorithm>
 #include <zephyr/kernel.h>
-#include "../hardware.hpp"
-#include "../persist.hpp"
-#include "transport.hpp"
+#include "../../../hardware.hpp"
+#include "../../../persist.hpp"
+#include "../transport.hpp"
 
 #pragma once
 

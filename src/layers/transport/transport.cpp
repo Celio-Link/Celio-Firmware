@@ -1,7 +1,7 @@
 #include "transport.hpp"
 
-#include "usbLayer.hpp"
-#include "serialLayer.hpp"
+#include "usb/usbLayer.hpp"
+#include "serial/serialLayer.hpp"
 
 namespace Transport
 {

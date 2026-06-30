@@ -3,6 +3,6 @@ zephyr_library_sources_ifdef(CONFIG_SOC_FAMILY_RPI_PICO linkLayer_pio.c)
 zephyr_library_sources_ifdef(CONFIG_SOC_FAMILY_RPI_PICO gbLinkLayer.c)
 
 zephyr_library_sources(packetLayer.cpp)
-zephyr_library_sources(usbLayer.cpp)
-zephyr_library_sources(serialLayer.cpp)
-zephyr_library_sources(transport.cpp)
+# zephyr_library_sources(usbLayer.cpp)
+
+add_subdirectory(transport)

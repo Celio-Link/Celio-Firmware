@@ -7,8 +7,8 @@ extern "C" {
 }
 
 #include "usbLayer.hpp"
-#include "../persist.hpp"
-#include "../firmware_version.hpp"
+#include "../../../persist.hpp"
+#include "../../../firmware_version.hpp"
 
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/usb/usb_device.h>
