@@ -31,21 +31,44 @@ void LinkModule::execute()
     }
 }
 
-void LinkModule::receiveCommand(std::span<const uint8_t> command)
+void LinkModule::handleCall(Call& call)
 {
-    switch (static_cast<LinkModeCommand>(command[0]))
+    switch (static_cast<LinkModeCall>(call.fid))
     {
-        case LinkModeCommand::SetModeMaster:
-            m_packetLayerMode = PacketLayer::Mode::master;
-            k_sem_give(&m_waitForLinkModeCommand);
-            break;
-        case LinkModeCommand::SetModeSlave:
-            m_packetLayerMode = PacketLayer::Mode::slave;
-            k_sem_give(&m_waitForLinkModeCommand);            
-            break;
-        case LinkModeCommand::StartHandshake: return m_currentSection->startHandshake();
-        case LinkModeCommand::ConnectLink: return m_currentSection->connectLink();
+        case LinkModeCall::SetMode: return callSetMode(call);
+        case LinkModeCall::StartHandshake: return callStartHandshake(call);
+        case LinkModeCall::ConnectLink: return callConnectLink(call);
+        case LinkModeCall::Data: return callReceiveData(call);
         default: break;
     }
+}
+
+void LinkModule::callSetMode(Call& call)
+{
+    switch(call.params()[0])
+    {
+        case 0x00: m_packetLayerMode = PacketLayer::Mode::master; break;
+        case 0x01: m_packetLayerMode = PacketLayer::Mode::slave; break;
+    }
+    k_sem_give(&m_waitForLinkModeCommand);
+    call.exitSuccess();
+}
+
+void LinkModule::callStartHandshake(Call& call)
+{
+    m_currentSection->startHandshake();
+    call.exitSuccess();
+}
+
+void LinkModule::callConnectLink(Call& call)
+{
+    m_currentSection->connectLink();
+    call.exitSuccess();
+}
+
+void LinkModule::callReceiveData(Call& call) 
+{
+    usbLink_receiveHandler(call.params());
+    call.exitSuccess();
 }
 

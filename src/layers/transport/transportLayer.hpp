@@ -4,11 +4,14 @@
 #include <algorithm>
 #include <zephyr/kernel.h>
 
-class Transport;
+#pragma once
+
+class TransportControl;
 
 class Call
 {
 public:
+    Call() {}
     explicit Call(uint16_t fid, uint8_t flags, std::span<uint8_t> data) {}
     bool exitSuccess();
     bool exitError();
@@ -20,18 +23,22 @@ public:
     }
 
     bool payloadCompletlyReceived() { return m_currentPayloadSize == m_payload.size(); }
+    uint16_t fid;
 
 private:
     std::span<uint8_t> m_payload;
     uint32_t m_currentPayloadSize = 0;
-    Transport* m_transport;
+    TransportControl* m_transport;
 };
 
-class Transport
+class TransportControl
 {
 public:
+    TransportControl() {}
     Call& receiveCall();
     bool returnCall(Call& call);
+
+    bool sendCall(Call& call);
 
 private:
     void receiveData(std::span<const uint8_t> data) 
@@ -56,18 +63,18 @@ private:
 
     static void receiveHandler(std::span<const uint8_t> receivedData, void* userData)
     {
-        Transport* self = static_cast<Transport*>(userData);
+        TransportControl* self = static_cast<TransportControl*>(userData);
         self->receiveData(receivedData);
     }
 };
 
-inline Call& Transport::receiveCall()
+inline Call& TransportControl::receiveCall()
 {
     k_sem_take(&m_waitForCall, K_FOREVER);
     return m_currentCall;
 }
 
-inline bool Transport::returnCall(Call& call)
+inline bool TransportControl::returnCall(Call& call)
 {
 
 }

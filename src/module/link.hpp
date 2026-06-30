@@ -7,12 +7,12 @@
 class LinkModule : public IModule
 {
 private:
-    enum class LinkModeCommand : uint8_t
+    enum class LinkModeCall : uint8_t
     {
-        SetModeMaster = 0x10,
-        SetModeSlave = 0x11,
+        SetMode = 0x10,
         StartHandshake = 0x12,
-        ConnectLink = 0x13
+        ConnectLink = 0x13,
+        Data = 0x14
     };
 
 public:
@@ -30,9 +30,19 @@ public:
         if (m_currentSection) m_currentSection->cancel();
     }
 
-    bool canHandle(uint8_t command) override { return (command & 0xF0) == 0x10; }
+    bool canHandle(uint8_t fid) override { return (fid & 0xF0) == 0x10; }
 
-    void receiveCommand(std::span<const uint8_t> command) override;
+    void handleCall(Call& call) override
+    {
+        switch (static_cast<LinkModeCall>(call.fid))
+        {
+            case LinkModeCall::SetMode: return callSetMode(call);
+            case LinkModeCall::StartHandshake: return callStartHandshake(call);
+            case LinkModeCall::ConnectLink: return callConnectLink(call);
+            case LinkModeCall::Data: return callReceiveData(call);
+            default: break;
+        }
+    }
 
 private:
 
@@ -45,5 +55,10 @@ private:
     //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
     // CALLS
     //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
+
+    void callSetMode(Call& call);
+    void callReceiveData(Call& call);
+    void callStartHandshake(Call& call);
+    void callConnectLink(Call& call);
 };
 

@@ -1,5 +1,6 @@
 #include <zephyr/kernel.h>
-#include <span>
+
+#include "../layers/transport/transportLayer.hpp"
 
 #pragma once
 
@@ -11,6 +12,6 @@ struct IModule {
 
     virtual bool canHandle(uint8_t command) = 0;
 
-    virtual void receiveCommand(std::span<const uint8_t> command) = 0;
+    virtual void handleCall(Call& call) = 0;
 
 };
