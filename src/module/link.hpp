@@ -2,7 +2,6 @@
 
 #include "../sections//usbSection.hpp"
 #include "moduleInterface.hpp"
-#include "syscalls/kernel.h"
 
 class LinkModule : public IModule
 {

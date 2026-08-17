@@ -43,30 +43,30 @@ void SerialLayer::initIfNeeded()
 
 void SerialLayer::onUartIrq()
 {
-    while (uart_irq_update(m_dev) && uart_irq_is_pending(m_dev))
-    {
-        if (uart_irq_rx_ready(m_dev))
-        {
-            uint8_t buf[64];
-            int n = uart_fifo_read(m_dev, buf, sizeof(buf));
-            for (int i = 0; i < n; i++) processIncomingByte(buf[i]);
-        }
+    // while (uart_irq_update(m_dev) && uart_irq_is_pending(m_dev))
+    // {
+    //     if (uart_irq_rx_ready(m_dev))
+    //     {
+    //         uint8_t buf[64];
+    //         int n = uart_fifo_read(m_dev, buf, sizeof(buf));
+    //         for (int i = 0; i < n; i++) processIncomingByte(buf[i]);
+    //     }
 
-        if (uart_irq_tx_ready(m_dev))
-        {
-            // ring_buf_get_claim/finish (rather than get + put-back) keeps
-            // byte order intact if the UART FIFO can only accept part of
-            // the chunk we offered.
-            uint8_t* tx_ptr;
-            uint32_t claimed = ring_buf_get_claim(&m_txRing, &tx_ptr, 64);
-            if (claimed == 0) {
-                uart_irq_tx_disable(m_dev);
-            } else {
-                int written = uart_fifo_fill(m_dev, tx_ptr, claimed);
-                ring_buf_get_finish(&m_txRing, written > 0 ? written : 0);
-            }
-        }
-    }
+    //     if (uart_irq_tx_ready(m_dev))
+    //     {
+    //         // ring_buf_get_claim/finish (rather than get + put-back) keeps
+    //         // byte order intact if the UART FIFO can only accept part of
+    //         // the chunk we offered.
+    //         uint8_t* tx_ptr;
+    //         uint32_t claimed = ring_buf_get_claim(&m_txRing, &tx_ptr, 64);
+    //         if (claimed == 0) {
+    //             uart_irq_tx_disable(m_dev);
+    //         } else {
+    //             int written = uart_fifo_fill(m_dev, tx_ptr, claimed);
+    //             ring_buf_get_finish(&m_txRing, written > 0 ? written : 0);
+    //         }
+    //     }
+    // }
 }
 
 void SerialLayer::processIncomingByte(uint8_t b)

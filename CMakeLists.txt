@@ -9,9 +9,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Only set ZEPHYR_MODULES manually if modules are vendored locally.
 # When building with west, modules are discovered automatically.
-if(EXISTS "${CMAKE_SOURCE_DIR}/modules/hal/rpi_pico")
-    set(ZEPHYR_MODULES "${CMAKE_SOURCE_DIR}/modules/hal/rpi_pico" "${CMAKE_SOURCE_DIR}/modules/hal/cmsis")
-endif()
+# if(EXISTS "${CMAKE_SOURCE_DIR}/modules/hal/rpi_pico")
+#     set(ZEPHYR_MODULES "${CMAKE_SOURCE_DIR}/modules/hal/rpi_pico" "${CMAKE_SOURCE_DIR}/modules/hal/cmsis")
+# endif()
 
 set(BOARD rpi_pico)
 

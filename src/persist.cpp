@@ -43,26 +43,26 @@ namespace
     PersistSettings loadSettings()
     {
         PersistSettings s{};
-        const struct flash_area *fa;
-        if (flash_area_open(STORAGE_PARTITION_ID, &fa) != 0) {
-            fillDefaults(s);
-            return s;
-        }
-        flash_area_read(fa, 0, &s, sizeof(s));
-        flash_area_close(fa);
+        // const struct flash_area *fa;
+        // if (flash_area_open(STORAGE_PARTITION_ID, &fa) != 0) {
+        //     fillDefaults(s);
+        //     return s;
+        // }
+        // flash_area_read(fa, 0, &s, sizeof(s));
+        // flash_area_close(fa);
 
-        if (s.magic != SETTINGS_MAGIC || s.version != SETTINGS_VERSION) {
-            fillDefaults(s);
-        }
+        // if (s.magic != SETTINGS_MAGIC || s.version != SETTINGS_VERSION) {
+        //     fillDefaults(s);
+        // }
         return s;
     }
 
     void saveSettings(const PersistSettings& s)
     {
         const struct flash_area *fa;
-        if (flash_area_open(STORAGE_PARTITION_ID, &fa) != 0) {
-            return;
-        }
+        // if (flash_area_open(STORAGE_PARTITION_ID, &fa) != 0) {
+        //     return;
+        // }
         // Flash must be erased before writing; RP2040 write-block-size is 1.
         flash_area_erase(fa, 0, fa->fa_size);
         flash_area_write(fa, 0, &s, sizeof(s));

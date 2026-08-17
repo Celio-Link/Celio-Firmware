@@ -2,7 +2,6 @@
 #include "../linkStatus.hpp"
 #include "../callbacks/commands.hpp"
 
-#include "syscalls/kernel.h"
 #include "zephyr/kernel.h"
 #include <zephyr/irq.h>
 

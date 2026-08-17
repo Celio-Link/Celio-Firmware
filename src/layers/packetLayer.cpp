@@ -1,6 +1,5 @@
 #include "packetLayer.hpp"
 #include "linkLayer.h"
-#include "syscalls/kernel.h"
 #include <cerrno>
 
 void PacketLayer::onTransiveDone(uint16_t rxBytes, uint16_t txBytes)
