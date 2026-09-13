@@ -1,0 +1,69 @@
+.program pio_master_mode
+
+.define SD_PIN_OUT 1
+.define SD_PIN_IN 1
+
+.define PREP_NEXT_TRANSMISSION 0
+.define RX_TX_DONE_FLAG 1
+.define NEXT_PLAYER_CHUNK 2
+.define START_TIMEOUT 2
+
+; Between Handshake cycle -> 30097 + cyles from .wraptarget till UART start bit
+
+.wrap_target
+
+set pindirs, 0b1101 ; pins SD | SO | SI | SC
+set pins, 0b1101 
+
+wait_till_next_transmission:
+    jmp y-- wait_till_next_transmission
+
+irq PREP_NEXT_TRANSMISSION[31] ; give irq time to fill fifo, this approach will keep timing constant
+nop[31]
+
+set pins, 0b1100 ; set SC low, martk start of complete transmission
+
+transive_loop:
+    set x, 15
+    pull
+    mov y osr
+    jmp !y done ; Transive state 0 -> done
+    pull
+    jmp y-- decrement_jump
+decrement_jump:
+    irq NEXT_PLAYER_CHUNK
+    jmp y-- receive_data_from_seat ; Transive state 1 -> receive data from seat
+    
+    transmit_data_for_player:
+        set pins, 0b0100 [15] ; UART start bit
+
+        transmit_data:
+            out pins, SD_PIN_OUT [14]
+            jmp x-- transmit_data
+
+        set pins, 0b1100 [15] ; UART stop bit
+        jmp transive_loop
+
+    receive_data_from_seat:
+        set pins, 0b1000
+        set pindirs, 0b0101 ; change SD to input
+        irq START_TIMEOUT
+        wait 0 pin 0 [21] ; delay to start sampling between duty cycle
+
+        receive_data:
+            in pins SD_PIN_IN [14]
+            jmp x-- receive_data
+
+        push [16] ; rx value
+
+        set pindirs, 0b1101 ; change SD to output
+        set pins, 0b1100 [29]
+        jmp transive_loop
+
+done:
+irq RX_TX_DONE_FLAG
+
+pull ; timing value for next transmission
+mov y osr ; store in y for wait_till_next_transmission
+
+.wrap
