@@ -99,7 +99,10 @@ static void configureEreaderSlavePio(void)
 {
     link_disable();
 
-    switch (cableDetection_getDetectedCableType())
+    enum CableType cableType = cableDetection_getDetectedCableType();
+    link_configureCableType(cableType);
+
+    switch (cableType)
     {
         case GBC:
             link_configureProgram(

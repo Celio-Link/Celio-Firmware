@@ -93,7 +93,9 @@ static void configureMaster()
 {
     link_disable();
 
-    switch (cableDetection_getDetectedCableType())
+    enum CableType cableType = cableDetection_getDetectedCableType();
+    link_configureCableType(cableType);
+    switch (cableType)
     {
         case GBC:
             link_configureProgram(
@@ -117,7 +119,10 @@ static void configureSlave(void)
 {
     link_disable();
 
-    switch (cableDetection_getDetectedCableType())
+    enum CableType cableType = cableDetection_getDetectedCableType();
+    link_configureCableType(cableType);
+
+    switch (cableType)
     {
         case GBC:
             link_configureProgram(
