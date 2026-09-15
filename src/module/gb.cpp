@@ -6,8 +6,8 @@
 #include "../layers/transport.hpp"
 extern "C"
 {
-    #include "../layers/gbLinkLayer.h"
-    #include "../layers/linkLayer.h"
+    #include "../layers/link/gbLinkLayer.h"
+    #include "../layers/link/linkLayer.h"
     #include "hardware/gpio.h"
     #include "hardware/timer.h"
 }
@@ -100,7 +100,7 @@ void GBModule::execute()
     m_cancel = false;
 
     // Disable GBA PIO link before initializing GB SPI
-    link_changeMode(DISABLED);
+    link_disable();
 
     // Initialize GB 8-bit SPI PIO on pio0
     gb_link_init();
@@ -155,7 +155,7 @@ void GBModule::executePrinterMode()
     m_subMode = SubMode::printer;
 
     // Disable GBA PIO link (free pio0 resources)
-    link_changeMode(DISABLED);
+    link_disable();
 
     // No gb_link_init() — printer mode uses GPIO bit-bang, not PIO SPI
 

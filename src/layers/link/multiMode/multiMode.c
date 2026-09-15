@@ -1,10 +1,13 @@
 #include "multiMode.h"
 #include "./../linkLayer.h"
+#include "./../cableDetection/cableDetection.h"
 
 #include <zephyr/kernel.h>
 
 #include <zephyr/drivers//misc/pio_rpi_pico/pio_rpi_pico.h>
 #include <zephyr/drivers/pinctrl.h>
+
+//-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
 /* SET-instruction pin values.
  *   bit 0 = SC  (GP0)       bit 1 = SI  (GP1, always input)
@@ -62,11 +65,35 @@ RPI_PICO_PIO_DEFINE_PROGRAM(pio_slave_gbc, 0, 18,
     (0xf000 | PIO_SD_GBC),
     0xc000, 0xbf42);
 
-void multiMode_configureMaster()
+//-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
+
+static void configureMaster();
+
+static void configureSlave();
+
+//-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
+// Interface
+//-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
+
+void multiMode_selectMode(enum MultiMode mode)
+{
+    switch(mode)
+    {
+
+    case MASTER: configureMaster(); break;
+    case SLAVE: configureSlave(); break;
+    case DISABLED: link_disable(); break;
+      break;
+    }
+}
+
+//-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
+
+static void configureMaster()
 {
     link_disable();
 
-    switch (cableDetection_getCableType())
+    switch (cableDetection_getDetectedCableType())
     {
         case GBC:
             link_configureProgram(
@@ -86,11 +113,11 @@ void multiMode_configureMaster()
 	link_enable();
 }
 
-void multiMode_configureSlave(void)
+static void configureSlave(void)
 {
     link_disable();
 
-    switch (cableDetection_getCableType())
+    switch (cableDetection_getDetectedCableType())
     {
         case GBC:
             link_configureProgram(

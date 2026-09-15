@@ -3,7 +3,7 @@
 
 extern "C"
 {
-    #include "layers/linkLayer.h" // CABLE_* selection values
+    #include "layers/link/cableDetection/cableDetection.h" // CABLE_* selection values
 }
 
 #include <cstring>

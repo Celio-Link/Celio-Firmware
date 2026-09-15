@@ -9,6 +9,11 @@
 #include "../layers/transport.hpp"
 #include "../linkStatus.hpp"
 
+extern "C"
+{
+    #include "../layers/link/linkLayer.h"
+}
+
 // Outbound MAW1 byte stream. Single producer (PIO done-ISR), single consumer
 // (process() thread) — the safe concurrent use of a Zephyr ring_buf.
 RING_BUF_DECLARE(g_awOutRing, 2048);
@@ -71,14 +76,14 @@ void awProto_receiveHandler(std::span<const uint8_t> data, void*)
     }
 }
 
-AwProtocolSection::AwProtocolSection(awproto::GameVariant variant, enum LinkMode linkMode)
+AwProtocolSection::AwProtocolSection(awproto::GameVariant variant, enum MultiMode multiMode)
 {
     new (&g_proxy) awproto::AwProxy();
     new (&g_parser) awproto::Maw1StreamParser();
 
     g_proxy.cfg = awproto::AwConfig::forVariant(variant);
     // SLAVE link mode means the attached GBA is the bus master (player 1).
-    g_proxy.gbaIsMaster = (linkMode == SLAVE);
+    g_proxy.gbaIsMaster = (multiMode == SLAVE);
     g_proxy.emit = &emitTrampoline;
 
     g_parser.setCallback(&frameTrampoline, nullptr);

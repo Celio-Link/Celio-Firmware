@@ -9,7 +9,7 @@
 
 extern "C"
 {
-    #include "../layers/linkLayer.h"
+    #include "../layers/link/linkLayer.h"
 }
 
 class EReaderProtocolSection

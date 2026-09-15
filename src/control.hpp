@@ -46,7 +46,7 @@ public:
         k_sem_init(&m_waitForModeSemaphore, 0, 1);
 
         // Persisted cable selection = boot default for the session override.
-        link_setCableOverride(getCableSelection());
+        cableDetection_setCableOverride(getCableSelection());
     }
 
     void executeMode()
@@ -64,7 +64,7 @@ public:
             case Mode::gbaTradeEmu:
             {
                 applyLedForSlot(LED_SLOT_GBA);
-                link_detectCableType();
+                cableDetection_detectCableType();
 
                 party::partyInit();
                 Transport::registerDataHandler(party::usbReceivePkmFile, nullptr);
@@ -80,7 +80,7 @@ public:
             case Mode::gbaLink:
             {
                 applyLedForSlot(LED_SLOT_GBA);
-                link_detectCableType();
+                cableDetection_detectCableType();
 
                 Transport::registerDataHandler(usbLink_receiveHandler, nullptr);
 
@@ -115,7 +115,7 @@ public:
             case Mode::advanceWars:
             {
                 applyLedForSlot(LED_SLOT_ADVANCE_WARS);
-                link_detectCableType();
+                cableDetection_detectCableType();
 
                 Transport::registerDataHandler(awProto_receiveHandler, nullptr);
 
@@ -132,7 +132,7 @@ public:
             case Mode::gbaEreader:
             {
                 applyLedForSlot(LED_SLOT_EREADER);
-                link_detectCableType();
+                cableDetection_detectCableType();
 
                 Transport::registerDataHandler(erProto_receiveHandler, nullptr);
 
@@ -264,7 +264,7 @@ private:
                 break;
             case HardwareCommand::SetCableOverride:
                 if (data.size() >= 2) {
-                    link_setCableOverride(data[1]);
+                    cableDetection_setCableOverride(data[1]);
                 }
                 break;
             case HardwareCommand::GetCableType:
@@ -272,7 +272,7 @@ private:
                 // Report-only: the cable is sampled once at mode entry (a GBA
                 // already in link mode drives SO low, which would poison a
                 // re-sample); the override command changes the path instead.
-                uint8_t resp[2] = { 0x4a, link_getDetectedCableType() };
+                uint8_t resp[2] = { 0x4a, static_cast<uint8_t>(cableDetection_getDetectedCableType()) };
                 Transport::sendData(std::span<const uint8_t>(resp, sizeof(resp)));
                 break;
             }
@@ -280,7 +280,7 @@ private:
                 // [0x4b, CABLE_*] — persist the cable selection and apply it now.
                 if (data.size() >= 2 && data[1] <= CABLE_FORCE_GBC) {
                     setCableSelection(data[1]);
-                    link_setCableOverride(data[1]);
+                    cableDetection_setCableOverride(data[1]);
                 }
                 break;
             default: break;

@@ -13,7 +13,8 @@
 
 extern "C"
 {
-    #include "../layers/linkLayer.h"
+    #include "../layers/link/linkLayer.h"
+    #include "../layers/link/ereader/ereader.h"
 }
 
 RING_BUF_DECLARE(g_erOutRing, 2048);
@@ -74,12 +75,12 @@ static void ensurePioLink()
     erProto_shutdownPokemonPacketLayer();
 
     if (erproto::isSma4Profile(g_proxy.profile))
-        link_configureEreaderSlave();
+        ereader_configureEreaderSlave();
     else
     {
-        link_configurePartnerPresence();
+        ereader_configurePartnerPresence();
         k_sleep(K_MSEC(200));
-        link_configurePokemonSlave();
+        multiMode_selectMode(SLAVE);
     }
     g_multiPioActive = true;
 
@@ -513,17 +514,17 @@ void EReaderProtocolSection::process()
             scSeenHigh = false;
 
             if (g_proxy.scanArmed && scToggled
-                && link_getReceivedWordCount() == 0)
+                && link_receivedWordCount() == 0)
                 g_wrongPinIntervals++;
 
             if (!g_sdPathFlipped && g_wrongPinIntervals >= kWrongPinIntervals)
             {
                 g_sdPathFlipped = true;
-                link_flipSdPinPath();
+                cableDetection_flipSdPinPath();
                 g_multiPioActive = false;
                 ensurePioLink();
                 g_proxy.emitWire(erproto::WIRE_FLAG_SD_FLIPPED,
-                                 link_getDetectedCableType(), 0);
+                                 cableDetection_getDetectedCableType(), 0);
             }
 
             if (g_proxy.wireLogEnabled)

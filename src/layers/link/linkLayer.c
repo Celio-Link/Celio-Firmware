@@ -1,4 +1,5 @@
 #include "linkLayer.h"
+#include "./cableDetection/cableDetection.h"
 
 #include <zephyr/kernel.h>
 
@@ -36,7 +37,7 @@ static struct LinkPio g_pio = { .device = NULL, .id = 0};
 
 static pio_sm_config g_config = {};
 
-static bool CableType g_configuredCable;
+static enum CableType g_configuredCable;
 
 static uint32_t g_wordCount = 0;
 
@@ -57,7 +58,7 @@ static void configureGBA();
 
 static void configureGBC();
 
-void assignPioGpios();
+void assignGpioToPio();
 
 static uint16_t reverse_bit16(uint16_t x);
 
@@ -148,7 +149,7 @@ void link_configureProgram(const pio_program_t* prgramm, uint32_t warp, uint32_t
     uint32_t offset = pio_add_program(g_pio.device, prgramm);
     sm_config_set_wrap(&g_config, offset + wrapTarget, offset + warp);
     pio_sm_init(g_pio.device, g_pio.id, -1, &g_config);
-    assignPioGpios();
+    assignGpioToPio();
 }
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
@@ -165,6 +166,7 @@ uint32_t link_getPin(enum LinkPin pin)
         case SD_GBC: return SD_GBC_pin;
       break;
     }
+    return 0;
 }
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
@@ -173,9 +175,9 @@ uint32_t link_receivedWordCount() { return g_wordCount; }
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
-void link_setPioPinDirs(uint32_t pin, enum gpio_dir direction)
+void link_setPioPinDirs(uint32_t pin, enum LinkPinDir direction)
 {
-    bool dir = direction == GPIO_OUT;
+    bool dir = (direction == PIN_DIR_IN);
     pio_sm_set_consecutive_pindirs(g_pio.device, g_pio.id, pin, 1, dir);
 }
 
@@ -206,7 +208,7 @@ uint8_t link_readPartnerPins()
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
-void assignPioGpios()
+void assignGpioToPio()
 {
     pio_gpio_init(g_pio.device, SC_pin);
     pio_gpio_init(g_pio.device, SI_pin);
@@ -272,7 +274,7 @@ static int init()
     sm_config_set_out_shift(&g_config, true, false, 0);
     sm_config_set_in_shift(&g_config, false, false, 0);
 
-    assignPioGpios();
+    assignGpioToPio();
     
     configureGBC();
 

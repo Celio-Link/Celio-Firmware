@@ -92,11 +92,11 @@ bool tryWrongPinRecovery(void)
     bool recovered = false;
 
     // only in slave mode for pkmn, 
-    if (g_slave_kind == CLASSIC && link_receivedWordCount() == 0 && g_watchdog_flips_left > 0)
+    if (g_enableWatchdog && link_receivedWordCount() == 0 && g_watchdog_flips_left > 0)
     {
         g_watchdog_flips_left--;
         cableDetection_flipSdPinPath();
-        //link_configureSlave(); //?
+        //link_configureSlave(); // ?
         recovered = true;
     }
     irq_unlock(key);

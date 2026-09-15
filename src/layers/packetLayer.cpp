@@ -1,5 +1,11 @@
 #include "packetLayer.hpp"
-#include "linkLayer.h"
+#include "zephyr/toolchain.h"
+
+extern "C" {
+    #include "link/multiMode/multiMode.h"
+}
+
+
 #include "syscalls/kernel.h"
 #include <cerrno>
 
@@ -75,6 +81,6 @@ bool PacketLayer::awaitDisable()
         if (k_sem_take(&m_saveToDisableSemaphore, K_MSEC(100)) == -EAGAIN) return false;
     }
     
-    link_changeMode(DISABLED);
+    multiMode_selectMode(DISABLED);
     return true;
 }

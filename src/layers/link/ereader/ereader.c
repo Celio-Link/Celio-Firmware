@@ -135,7 +135,6 @@ static void assertBothSdPartnerGpio(void)
 }
 
 
-
 static void releaseInactiveSdPin(void)
 {
     const bool gbc = cableDetection_getDetectedCableType();

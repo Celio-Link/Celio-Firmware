@@ -8,7 +8,8 @@
 
 extern "C"
 {
-    #include "../layers/linkLayer.h"
+    #include "../layers/link/linkLayer.h"
+    #include "../layers//link/cableDetection/cableDetection.h"
 }
 
 namespace erproto
@@ -284,7 +285,7 @@ struct EReaderProxy
         const uint8_t pins =
             (link_readPartnerPins() & static_cast<uint8_t>(~0x01))
             | (scToggled ? 0x01 : 0x00);
-        emitWire(WIRE_FLAG_NO_TRAFFIC, link_getDetectedCableType(),
+        emitWire(WIRE_FLAG_NO_TRAFFIC, cableDetection_getDetectedCableType(),
                  static_cast<uint16_t>(pins));
     }
 

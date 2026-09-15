@@ -4,7 +4,7 @@
 
 extern "C"
 {
-    #include "../layers/linkLayer.h"
+    #include "../layers/link/ereader/ereader.h"
 }
 
 EReaderModule::EReaderModule(erproto::Profile profile)
@@ -52,8 +52,8 @@ void EReaderModule::execute()
         section.armLink();
         sendLinkStatus(LinkStatus::LinkConnected);
         section.process();
-        link_changeMode(DISABLED);
-        link_releasePartnerPins();
+        link_disable();
+        ereader_releasePartnerPins();
     }
     m_currentSection = nullptr;
 }

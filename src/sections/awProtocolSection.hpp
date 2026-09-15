@@ -4,7 +4,7 @@
 
 extern "C"
 {
-    #include "../layers/linkLayer.h"
+    #include "../layers/link/multiMode/multiMode.h"
 }
 
 #include <zephyr/kernel.h>
@@ -31,7 +31,7 @@ extern "C"
 class AwProtocolSection
 {
 public:
-    AwProtocolSection(awproto::GameVariant variant, enum LinkMode linkMode);
+    AwProtocolSection(awproto::GameVariant variant, enum MultiMode mode);
     ~AwProtocolSection();
 
     void process();

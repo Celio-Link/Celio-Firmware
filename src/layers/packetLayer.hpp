@@ -2,7 +2,8 @@
 #include <cstdint>
 extern "C"
 {
-    #include "linkLayer.h"
+    #include "link/multiMode/multiMode.h"
+    #include "../layers/link/linkLayer.h"
 }
 
 #include "../callbacks/commands.hpp"
@@ -135,14 +136,14 @@ public:
         switch (mode)
         {
             case Mode::master:
-                link_changeMode(MASTER);
+                multiMode_selectMode(MASTER);
                 #ifdef CONFIG_STM32F0
                 m_masterClock.enableSync();
                 #endif
                 break;
             
             case Mode::slave:
-                link_changeMode(SLAVE);
+                multiMode_selectMode(SLAVE);
                 #ifdef CONFIG_STM32F0
                 m_masterClock.disableSync();
                 #endif

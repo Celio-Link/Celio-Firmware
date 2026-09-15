@@ -1,6 +1,11 @@
 
 #pragma once
 
-void multiMode_configureMaster();
+enum MultiMode
+{
+    MASTER,
+    SLAVE,
+    DISABLED
+};
 
-void multiMode_configureSlave();
+void multiMode_selectMode(enum MultiMode mode);
