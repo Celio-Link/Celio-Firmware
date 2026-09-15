@@ -60,7 +60,7 @@ static void configureGBC();
 
 void assignGpioToPio();
 
-static uint16_t reverse_bit16(uint16_t x);
+static uint16_t reverse16Bit(uint16_t x);
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
@@ -86,7 +86,7 @@ static void pioIsr_done(const void* arg)
     (void)arg;
     g_wordCount++;
     uint16_t rxData = pio_sm_get(g_pio.device, g_pio.id);
-    rxData = reverse_bit16(rxData);
+    rxData = reverse16Bit(rxData);
     if (g_receiveCallback) g_receiveCallback(rxData, g_receiveUserData);
     if (g_transiveDoneCallback) g_transiveDoneCallback(rxData, g_lastTxValue, g_transiveDoneUserdata);
     pio_interrupt_clear(g_pio.device, TX_RX_DONE_IRQ);
@@ -217,7 +217,7 @@ void assignGpioToPio()
     pio_gpio_init(g_pio.device, SD_GBC_pin);
 }
 
-uint16_t reverse_bit16(uint16_t x)
+uint16_t reverse16Bit(uint16_t x)
 {
 	x = ((x & 0x5555) << 1) | ((x & 0xAAAA) >> 1);
 	x = ((x & 0x3333) << 2) | ((x & 0xCCCC) >> 2);
@@ -266,19 +266,19 @@ static int init()
     int ret = pinctrl_apply_state(config, PINCTRL_STATE_DEFAULT);
 
     link_disable();
-    
-    pio_sm_config g_config = pio_get_default_sm_config();
-
-    sm_config_set_set_pins(&g_config, SC_pin, 5);
-
-    sm_config_set_out_shift(&g_config, true, false, 0);
-    sm_config_set_in_shift(&g_config, false, false, 0);
 
     assignGpioToPio();
     
     configureGBC();
 
     gpio_pull_up(link_getPin(SD));
+
+    pio_sm_config g_config = pio_get_default_sm_config();
+
+    sm_config_set_set_pins(&g_config, SC_pin, 5);
+
+    sm_config_set_out_shift(&g_config, true, false, 0);
+    sm_config_set_in_shift(&g_config, false, false, 0);
 
     sm_config_set_clkdiv(&g_config, 67.816f); // ~540 ns per inst, 16 inst equal baud 115200
 
