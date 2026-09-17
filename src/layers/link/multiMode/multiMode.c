@@ -143,7 +143,7 @@ static void configureSlave(void)
     
 	link_enable();
 
-    link_setPioPinDirs(link_getPin(SC), GPIO_IN);
-    link_setPioPinDirs(link_getPin(SI), GPIO_IN);
-    link_setPioPinDirs(link_getPin(SO), GPIO_OUT);
+    link_setPioPinDirs(link_getPin(SC), PIN_DIR_IN);
+    link_setPioPinDirs(link_getPin(SI), PIN_DIR_IN);
+    link_setPioPinDirs(link_getPin(SO), PIN_DOR_OUT);
 }

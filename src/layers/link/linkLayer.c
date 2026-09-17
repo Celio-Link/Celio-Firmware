@@ -148,8 +148,8 @@ void link_configureProgram(const pio_program_t* prgramm, uint32_t warp, uint32_t
     g_wordCount = 0;
     uint32_t offset = pio_add_program(g_pio.device, prgramm);
     sm_config_set_wrap(&g_config, offset + wrapTarget, offset + warp);
-    pio_sm_init(g_pio.device, g_pio.id, -1, &g_config);
     assignGpioToPio();
+    pio_sm_init(g_pio.device, g_pio.id, -1, &g_config);
 }
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
@@ -177,8 +177,8 @@ uint32_t link_receivedWordCount() { return g_wordCount; }
 
 void link_setPioPinDirs(uint32_t pin, enum LinkPinDir direction)
 {
-    bool dir = (direction == PIN_DIR_IN);
-    pio_sm_set_consecutive_pindirs(g_pio.device, g_pio.id, pin, 1, dir);
+    bool isOut = (direction == PIN_DOR_OUT);
+    pio_sm_set_consecutive_pindirs(g_pio.device, g_pio.id, pin, 1, isOut);
 }
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
@@ -228,6 +228,7 @@ uint16_t reverse16Bit(uint16_t x)
 static void configureGBA()
 {
     g_configuredCable = GBA;
+    sm_config_set_set_pins(&g_config, SC_pin, 4);
     sm_config_set_out_pins(&g_config, SD_GBA_pin, 1);
     sm_config_set_in_pins(&g_config, SD_GBA_pin);
     sm_config_set_jmp_pin(&g_config, SD_GBA_pin);
@@ -238,6 +239,7 @@ static void configureGBA()
 static void configureGBC()
 {
     g_configuredCable = GBC;
+    sm_config_set_set_pins(&g_config, SC_pin, 5);
     sm_config_set_out_pins(&g_config, SD_GBC_pin, 1);
     sm_config_set_in_pins(&g_config, SD_GBC_pin);
     sm_config_set_jmp_pin(&g_config, SD_GBC_pin);
@@ -273,9 +275,7 @@ static int init()
 
     gpio_pull_up(link_getPin(SD));
 
-    pio_sm_config g_config = pio_get_default_sm_config();
-
-    sm_config_set_set_pins(&g_config, SC_pin, 5);
+    g_config = pio_get_default_sm_config();
 
     sm_config_set_out_shift(&g_config, true, false, 0);
     sm_config_set_in_shift(&g_config, false, false, 0);

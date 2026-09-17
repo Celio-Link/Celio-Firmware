@@ -124,8 +124,8 @@ static void configureEreaderSlavePio(void)
     gpio_set_dir(link_getPin(SO), GPIO_OUT);
     gpio_put(link_getPin(SO), 0);
 
-    link_setPioPinDirs(link_getPin(SC), GPIO_IN);
-    link_setPioPinDirs(link_getPin(SI), GPIO_IN);
+    link_setPioPinDirs(link_getPin(SC), PIN_DIR_IN);
+    link_setPioPinDirs(link_getPin(SI), PIN_DIR_IN);
 
     link_enable();
 }
