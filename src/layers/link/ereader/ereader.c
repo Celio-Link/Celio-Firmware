@@ -110,6 +110,7 @@ static void configureEreaderSlavePio(void)
                 RPI_PICO_PIO_GET_WRAP(pio_slave_ereader_gbc), 
                 RPI_PICO_PIO_GET_WRAP_TARGET(pio_slave_ereader_gbc)
             );
+            break;
 
         case GBA:
             link_configureProgram(

@@ -103,7 +103,8 @@ static void configureMaster()
                 RPI_PICO_PIO_GET_WRAP(pio_master_gbc), 
                 RPI_PICO_PIO_GET_WRAP_TARGET(pio_master_gbc)
             );
-
+            break;
+            
         case GBA:
             link_configureProgram(
                 RPI_PICO_PIO_GET_PROGRAM(pio_master_gba), 
@@ -130,6 +131,7 @@ static void configureSlave(void)
                 RPI_PICO_PIO_GET_WRAP(pio_slave_gbc), 
                 RPI_PICO_PIO_GET_WRAP_TARGET(pio_slave_gbc)
             );
+            break;
 
         case GBA:
             link_configureProgram(
