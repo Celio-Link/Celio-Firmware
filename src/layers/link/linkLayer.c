@@ -127,6 +127,10 @@ void link_startTransive() {}
 
 void link_disable()
 {
+    //FIXME breaches layers but good enoght for now, 
+    // any mode change will disable it and mode that need it can enable it again
+    cableDetection_enableSlaveMonitoring(false);
+
     g_wordCount = 0;
     pio_sm_set_enabled(g_pio.device, g_pio.id, false);
     pio_clear_instruction_memory(g_pio.device);

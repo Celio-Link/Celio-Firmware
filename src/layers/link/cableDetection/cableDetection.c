@@ -1,5 +1,6 @@
 #include "cableDetection.h"
 #include "./../linkLayer.h"
+#include "./../multiMode/multiMode.h"
 
 #include <zephyr/kernel.h>
 
@@ -78,6 +79,11 @@ void cableDetection_setCableOverride(uint8_t mode)
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
+void cableDetection_enableSlaveMonitoring(bool enable)
+{
+    g_enableWatchdog = enable;
+}
+
 bool useGbcCable(void)
 {
     if (g_cableOverride == CABLE_FORCE_GBA) return false;
@@ -96,7 +102,7 @@ bool tryWrongPinRecovery(void)
     {
         g_watchdog_flips_left--;
         cableDetection_flipSdPinPath();
-        //link_configureSlave(); // ?
+        multiMode_selectMode(SLAVE);
         recovered = true;
     }
     irq_unlock(key);

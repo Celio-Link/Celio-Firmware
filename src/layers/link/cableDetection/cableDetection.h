@@ -22,3 +22,5 @@ void cableDetection_detectCableType(void);
 enum CableType cableDetection_getDetectedCableType(void);
 
 void cableDetection_setCableOverride(uint8_t mode);
+
+void cableDetection_enableSlaveMonitoring(bool enable);

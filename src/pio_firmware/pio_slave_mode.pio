@@ -26,9 +26,10 @@ push
 set pins, 0b1000
 set pindirs, 0b1100 ; change SD to output, SO stays output
 
-nop [31] ; wait a short time to match original behavour better
+nop [30] ; wait a short time to match original behavour better
 
 set x, 15
+pull
 pull
 set pins, 0b0000 [16] ; UART start bit
 transmit_data:
