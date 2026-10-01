@@ -1,10 +1,8 @@
 
 #include <zephyr/kernel.h>
-
-#include <span>
-
 #include "hardware/pio.h"
 
+#include <array>
 #include "./cableDetection/cableDetection.hpp"
 
 #pragma once

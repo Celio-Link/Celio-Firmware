@@ -10,7 +10,7 @@ extern "C"
     #include "linkPinctrl.h"
 }
 
-#include "linkLayer.hpp"
+#include "./linkLayer.hpp"
 
 
 #include "./cableDetection/cableDetection.hpp"
