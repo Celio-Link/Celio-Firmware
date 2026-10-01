@@ -115,7 +115,7 @@ static void logPacketFrame(erproto::EReaderProxy& proxy,
                            const PacketLayer::TransiveResult& result)
 {
     if (!proxy.wireLogEnabled) return;
-    proxy.noteWireRound(result.received[0], result.transmitted[0]);
+    proxy.noteWireRound(result.received[0], result.transmitted[0][0]);
 }
 
 struct PokeSendContext : TransmitContext

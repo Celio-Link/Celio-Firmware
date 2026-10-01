@@ -4,7 +4,7 @@
 #include "syscalls/kernel.h"
 #include <cerrno>
 
-void PacketLayer::onTransiveDone(uint16_t rxBytes, uint16_t txBytes)
+void PacketLayer::onTransiveDone(uint16_t rxBytes, std::array<uint16_t, 3> txBytes)
 {
     switch (m_state)
     {
@@ -15,7 +15,7 @@ void PacketLayer::onTransiveDone(uint16_t rxBytes, uint16_t txBytes)
             m_timingUs = timingHandshake;
 
             if (rxBytes == LINK_MASTER_HANDSHAKE 
-                || txBytes == LINK_MASTER_HANDSHAKE)
+                || txBytes[0] == LINK_MASTER_HANDSHAKE)
             {
                 m_state = TransiveState::crc;
                 m_timingUs = timingCommandBytes;

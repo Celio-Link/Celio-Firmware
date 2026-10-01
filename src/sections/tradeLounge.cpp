@@ -6,7 +6,6 @@ extern "C"
 }
 
 #include "../layers/packet/packetCommands/commands.hpp"
-#include <algorithm>
 
 NextSection TradeLounge::process()
 {
@@ -16,7 +15,7 @@ NextSection TradeLounge::process()
 
     while (!m_cancel)
     {
-        auto result = m_packetLayer.awaitTransiveResults();
+        PacketLayer::TransiveResult result = m_packetLayer.awaitTransiveResults();
         std::span<const uint16_t> command = result.received;
 
         switch(command[0])

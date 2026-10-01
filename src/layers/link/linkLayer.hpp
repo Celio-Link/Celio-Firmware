@@ -7,12 +7,15 @@
 
 #pragma once
 
+/**
+ * @brief Data for the next link transfer, returned by the TransmitHandler.
+ */
 struct NextTransmit
 {
-    uint8_t playerCount;
-    uint8_t seatNumber;
-    std::array<uint16_t, 3> values;
-    uint32_t timingUs;
+    uint8_t playerCount;            ///< Players in the session, including the connected GBA [2-4]
+    uint8_t seatNumber;             ///< Index where connect GBA word is received [0-3]
+    std::array<uint16_t, 3> values; ///< Words sent to the GBA; only the first [playerCount - 1] entries are used
+    uint32_t timingUs;              ///< Master only: delay before the next transfer, in PIO cycles (~0.54 us)
 };
 
 enum LinkPin
@@ -33,7 +36,7 @@ enum LinkPinDir
 
 typedef void (*ReceiveHandler)(uint16_t rx, void* userData);
 typedef struct NextTransmit (*TransmitHandler)(void* userData);
-typedef void (*TransiveDoneHandler)(uint16_t rx, uint16_t tx, void* userData);
+typedef void (*TransiveDoneHandler)(uint16_t rx, std::array<uint16_t, 3> tx, void* userData);
 
 void link_setTransmitCallback(TransmitHandler cb, void* userData);
 

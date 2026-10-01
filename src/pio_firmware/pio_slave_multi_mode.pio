@@ -3,8 +3,8 @@
 .define SD_PIN_OUT 1
 .define SD_PIN_IN 1
 
-.define RX_TX_DONE_FLAG 0
-.define TX_VALUE_FLAG 1
+.define PREP_NEXT_TRANSMISSION 0
+.define RX_TX_DONE_FLAG 1
 
 .wrap_target
 
@@ -14,37 +14,35 @@ set pindirs, 0b0100 ; change SD to input, SO to output
 
 set x, 15 
 wait 0 pin 0 
-irq TX_VALUE_FLAG [23] ; wait one and a half bit before start sampling, irq early so it is avaible later
+irq PREP_NEXT_TRANSMISSION [23] ; wait one and a half bit before start sampling, irq early so it is avaible later
 
 receive_data:
     in pins SD_PIN_IN [14]
     jmp x-- receive_data
 
 push
+pull ; first pull is seat number, no needed for slave since receive is alwyas at 0
 
 set pins, 0b1000
 set pindirs, 0b1100 ; change SD to output, SO stays output
 
 nop [31] ; wait a short time to match original behavour better
 
-pull
-mov y osr
-
 transmit_for_player:
+    set x, 15
+    pull
+    set pins, 0b0000 [16] ; UART start bit
 
-set x, 15
-pull
-set pins, 0b0000 [16] ; UART start bit
-transmit_data:
-    out pins, SD_PIN_OUT [14]
-    jmp x-- transmit_data
+    transmit_data:
+        out pins, SD_PIN_OUT [14]
+        jmp x-- transmit_data
 
-set pins, 0b1000 [16] ; UART stop bit
+    set pins, 0b1000 [16] ; UART stop bit
+    nop [31] ; wait a short time to match original behavour better
+
+    mov x, status
+    jmp !x transmit_for_player ; tx fifo empty
 
 irq RX_TX_DONE_FLAG
-
-nop [31] ; wait a short time to match original behavour better
-
-jmp y-- transmit_for_player
 
 .wrap

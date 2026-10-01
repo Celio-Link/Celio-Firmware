@@ -45,7 +45,7 @@ TransmitBehaviour sendLinkTypeCommand(uint16_t type)
     {
         .context = std::move(c),
         .transmitCallback = sendLinkTypeCommandTransive,
-        .transmitDoneCallback = [](TransmitContext* ctx){ return CommandState::done; }
+        .transmitDoneCallback = [](TransmitContext* ctx){ (void)ctx; return CommandState::done; }
     };
 
     return std::move(transive);

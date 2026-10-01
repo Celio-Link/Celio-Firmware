@@ -1,6 +1,5 @@
 
 #include "../layers/packet/packetLayer.hpp"
-#include "../layers/usbLayer.hpp"
 #include "../layers/transport.hpp"
 
 #include <algorithm>

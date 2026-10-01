@@ -18,7 +18,7 @@ void TradeConnection::handleInitialDataExchange()
 
     while (!m_cancel)
     {
-        auto result = m_packetLayer.awaitTransiveResults();
+        PacketLayer::TransiveResult result = m_packetLayer.awaitTransiveResults();
         std::span<const uint16_t> command = result.received;
 
         if (m_requestBlock)

@@ -161,5 +161,4 @@ static void wrongPinWatchdogThread(void* a, void* b, void* c)
     }
 }
 
-K_THREAD_DEFINE(wrongPinWatchdog_tid, 768, wrongPinWatchdogThread,
-                NULL, NULL, NULL, 12, 0, 0);
+K_THREAD_DEFINE(wrongPinWatchdog_tid, 768, wrongPinWatchdogThread, NULL, NULL, NULL, 12, 0, 0);

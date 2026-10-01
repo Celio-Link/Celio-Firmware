@@ -20,7 +20,7 @@ void UsbSection::establishConncection()
 
     if (m_playerSeat == 0)
     {
-        while (m_packetLayer.getTransmittedHandshake() != LINK_MASTER_HANDSHAKE) 
+        while (m_packetLayer.getTransmittedHandshake()[0] != LINK_MASTER_HANDSHAKE) 
         { 
             if (m_cancel) return; 
         }
@@ -39,7 +39,7 @@ void UsbSection::establishConncection()
 bool UsbSection::process()
 {
     bool keepAlive = true;
-    bool partnerReadyCloseLink = false;
+    bool partnerReadyCloseLink[3] = {false, false, false};
     bool readyCloseLink = false;
     establishConncection();
 
@@ -54,25 +54,29 @@ bool UsbSection::process()
             keepAlive = false;
         } 
 
-        if (result.transmitted[0] == LINKCMD_SEND_HELD_KEYS && result.transmitted[1] == LINK_KEY_CODE_EXIT_ROOM)
+        if (result.transmitted[0][0] == LINKCMD_SEND_HELD_KEYS && result.transmitted[0][1] == LINK_KEY_CODE_EXIT_ROOM)
         {
             keepAlive = false;
         }
 
         if (result.received[0] == LINKCMD_READY_CLOSE_LINK)
         {
-            partnerReadyCloseLink = true;
-        }
-
-        if (result.transmitted[0] == LINKCMD_READY_CLOSE_LINK)
-        {
             readyCloseLink = true;
         }
 
-        if (partnerReadyCloseLink && readyCloseLink)
-        {   
-            break;
+        for (int i = 0; i < m_playerCount - 1; i++)
+        {
+            if (result.transmitted[i][0] == LINKCMD_READY_CLOSE_LINK)
+            {
+                partnerReadyCloseLink[i] = true;
+            }
         }
+            
+        // only the partners actually in the session have to be ready
+        const auto partners = std::span(partnerReadyCloseLink).first(m_playerCount - 1);
+        const bool closeLink = readyCloseLink && std::ranges::all_of(partners, [](bool ready) { return ready; });
+
+        if (closeLink) break;
     }
 
     flush();

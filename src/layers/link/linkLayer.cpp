@@ -80,7 +80,7 @@ static void pioIsr_prepareTransmission()
 {
     if (g_transmitCallback) g_nextTransmission = g_transmitCallback(g_transmitUserData);
     pio_sm_put(g_pio.device, g_pio.id, g_nextTransmission.seatNumber);
-    for (int i = 0; i < g_nextTransmission.playerCount; i++)
+    for (int i = 0; i < g_nextTransmission.playerCount - 1; i++)
     {
         pio_sm_put(g_pio.device, g_pio.id, g_nextTransmission.values[i]);
     }
@@ -95,7 +95,7 @@ static void pioIsr_done()
     uint16_t rxData = pio_sm_get(g_pio.device, g_pio.id);
     rxData = reverse16Bit(rxData);
     if (g_receiveCallback) g_receiveCallback(rxData, g_receiveUserData);
-    //if (g_transiveDoneCallback) g_transiveDoneCallback(rxData, g_transiveDoneUserdata);
+    if (g_transiveDoneCallback) g_transiveDoneCallback(rxData, g_nextTransmission.values, g_transiveDoneUserdata);
     pio_interrupt_clear(g_pio.device, RX_TX_DONE_FLAG);
 }
 

@@ -23,7 +23,7 @@ public:
     struct TransiveResult
     {
         std::span<const uint16_t> received;
-        std::span<const uint16_t> transmitted;
+        std::span<const std::array<uint16_t, 3>> transmitted;
     };
 
 private:
@@ -99,7 +99,7 @@ public:
         return m_receivedHandshake;
     }
 
-    uint16_t getTransmittedHandshake()
+    std::array<uint16_t, 3> getTransmittedHandshake()
     {
         k_sem_take(&m_handshakeSemaphore, K_FOREVER);
         return m_transmitedHandShake;
@@ -120,7 +120,7 @@ public:
 
     void connectHandshake() { m_handshakeState = HandShakeState::connect; }
 
-    bool isHandshakeEnabled() { return m_transmitedHandShake == LINK_SLAVE_HANDSHAKE; }
+    bool isHandshakeEnabled() { return m_transmitedHandShake[0] == LINK_SLAVE_HANDSHAKE; }
 
     void setSeatNumber(uint8_t seatNumber)
     {   
@@ -221,6 +221,7 @@ private:
     std::array<uint16_t, 3> transmitCommand()
     {
         std::array<uint16_t, 3> txBytes = m_handler.transmit();
+        m_transmittedCommand[m_transmitCommandIndex] = txBytes;
         for (uint8_t i = 0; i < m_playerCount - 1; i++)
         {
             m_crc += txBytes[i];
@@ -230,7 +231,7 @@ private:
 
     //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
-    void onTransiveDone(uint16_t rxBytes, uint16_t txBytes);
+    void onTransiveDone(uint16_t rxBytes, std::array<uint16_t, 3> txBytes);
 
     //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
@@ -242,7 +243,7 @@ private:
     uint8_t m_playerCount;
 
     uint16_t m_receivedHandshake = LINK_HANDSHAKE_DISABLE;
-    uint16_t m_transmitedHandShake = LINK_HANDSHAKE_DISABLE;
+    std::array<uint16_t, 3> m_transmitedHandShake = {LINK_HANDSHAKE_DISABLE, LINK_HANDSHAKE_DISABLE, LINK_HANDSHAKE_DISABLE};
     uint16_t m_crc = LINK_SLAVE_HANDSHAKE; //first crc is always handshake
 
     uint32_t m_timingUs = 0;
@@ -254,7 +255,7 @@ private:
     int m_commandIndex = 0;
     std::array<uint16_t, 8> m_receivedCommand = {};
     int m_transmitCommandIndex = 0;
-    std::array<uint16_t, 8> m_transmittedCommand = {};
+    std::array<std::array<uint16_t, 3>, 8> m_transmittedCommand = {};
 
     TransmitBehaviour m_handler = emptyCommand();
     TransiveState m_state = TransiveState::handshake;
@@ -280,7 +281,7 @@ private:
         return self->onTransmit();
     }
 
-    static void transiveDoneCallback(uint16_t rxBytes, uint16_t txBytes, void* userData)
+    static void transiveDoneCallback(uint16_t rxBytes, std::array<uint16_t, 3> txBytes, void* userData)
     {
         PacketLayer* self = static_cast<PacketLayer*>(userData);
         self->onTransiveDone(rxBytes, txBytes);
