@@ -14,7 +14,7 @@ extern "C"
 void TradeConnection::handleInitialDataExchange()
 {
     connectAsMaster();
-    m_packetLayer.setTransiveHandler(sendLinkTypeCommand(LINKTYPE_TRADE_CONNECTING));
+    m_packetLayer.sendCommand(sendLinkTypeCommand(LINKTYPE_TRADE_CONNECTING));
 
     while (!m_cancel)
     {
@@ -24,7 +24,7 @@ void TradeConnection::handleInitialDataExchange()
         if (m_requestBlock)
         {
             m_requestBlock = false;
-            m_packetLayer.setTransiveHandler(sendBlockCommandRequestCommand(m_requestBlockSize));
+            m_packetLayer.sendCommand(sendBlockCommandRequestCommand(m_requestBlockSize));
 
             k_sleep(K_MSEC(5));
             continue;
@@ -44,7 +44,7 @@ void TradeConnection::handleInitialDataExchange()
                         m_requestBlockSize = 1;
                         party::partnerPartyInit();
                         k_timer_start(&m_commandRequestTimer, K_MSEC(2000), K_NO_WAIT);
-                        m_packetLayer.setTransiveHandler(blockCommand(linkPlayerBlock, sizeof(*linkPlayerBlock), sizeof(*linkPlayerBlock)));
+                        m_packetLayer.sendCommand(blockCommand(linkPlayerBlock, sizeof(*linkPlayerBlock), sizeof(*linkPlayerBlock)));
                         break;
                     }
 
@@ -54,7 +54,7 @@ void TradeConnection::handleInitialDataExchange()
                         m_blockState = TradeConnectionState::PartyPart1;
                         m_requestBlockSize = 1;
                         k_timer_start(&m_commandRequestTimer, K_MSEC(2000), K_NO_WAIT);
-                        m_packetLayer.setTransiveHandler(blockCommand(party.data(), party.size(), 200));
+                        m_packetLayer.sendCommand(blockCommand(party.data(), party.size(), 200));
                         break;
                     }
 
@@ -64,7 +64,7 @@ void TradeConnection::handleInitialDataExchange()
                         m_blockState = TradeConnectionState::PartyPart2;
                         m_requestBlockSize = 1;
                         k_timer_start(&m_commandRequestTimer, K_MSEC(2000), K_NO_WAIT);
-                        m_packetLayer.setTransiveHandler(blockCommand(party.data(), party.size(), 200));
+                        m_packetLayer.sendCommand(blockCommand(party.data(), party.size(), 200));
                         break;
                     }
 
@@ -73,7 +73,7 @@ void TradeConnection::handleInitialDataExchange()
                         const auto party = std::as_bytes(party::getParty().subspan<400, 200>());
                         m_blockState = TradeConnectionState::Mail;
                         m_requestBlockSize = 3;
-                        m_packetLayer.setTransiveHandler(blockCommand(party.data(), party.size(), 200));
+                        m_packetLayer.sendCommand(blockCommand(party.data(), party.size(), 200));
                         k_timer_start(&m_commandRequestTimer, K_MSEC(2000), K_NO_WAIT);
                         break;
                     }
@@ -83,14 +83,14 @@ void TradeConnection::handleInitialDataExchange()
                         //const auto mail = getEmptyMailPayload();
                         m_blockState = TradeConnectionState::Ribbons;
                         m_requestBlockSize = 4;
-                        m_packetLayer.setTransiveHandler(blockCommand(0, 0, 220));
+                        m_packetLayer.sendCommand(blockCommand(0, 0, 220));
                         k_timer_start(&m_commandRequestTimer, K_MSEC(2000), K_NO_WAIT);
                         break;
                     }
 
                     case TradeConnectionState::Ribbons:
                     {
-                        m_packetLayer.setTransiveHandler(blockCommand(nullptr, 0, 40));
+                        m_packetLayer.sendCommand(blockCommand(nullptr, 0, 40));
                         m_blockState = TradeConnectionState::LinkCMD;
                         break;
                     }
@@ -190,7 +190,7 @@ NextSection TradeConnection::handleTradeNegotiations()
 
             case LINKCMD_READY_CLOSE_LINK:
             {
-                m_packetLayer.setTransiveHandler(readyCloseLinkCommand());
+                m_packetLayer.sendCommand(readyCloseLinkCommand());
                 k_sleep(K_MSEC(400));
                 return nextSection;
             }
@@ -212,5 +212,5 @@ void TradeConnection::sendLinkCommand(uint16_t cmd, uint16_t arg)
     static std::array<uint16_t, 2> command;
     command[0] = cmd;
     command[1] = arg;
-    m_packetLayer.setTransiveHandler(blockCommand(command.data(), command.size() * sizeof(uint16_t), 20));
+    m_packetLayer.sendCommand(blockCommand(command.data(), command.size() * sizeof(uint16_t), 20));
 }

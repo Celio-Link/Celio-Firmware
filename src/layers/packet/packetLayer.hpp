@@ -67,7 +67,7 @@ public:
         awaitDisable();
     }
 
-    void setTransiveHandler(TransmitBehaviour handler)
+    void sendCommand(TransmitBehaviour handler)
     {
         m_handler = std::move(handler);
         m_idle = false;
@@ -199,6 +199,7 @@ private:
 
     void receiveCrc(uint16_t rxBytes)
     {
+        (void)rxBytes;
         // don't care
     }
 

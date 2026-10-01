@@ -15,10 +15,8 @@ extern "C"
 
 #include "./cableDetection/cableDetection.hpp"
 
-#define PREP_NEXT_TRANSMISSION 0
+#define PREP_NEXT_TRANSMISSION_FLAG 0
 #define RX_TX_DONE_FLAG 1
-
-#define PIO_DONE_SENTINAL 0
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
@@ -87,7 +85,7 @@ static void pioIsr_prepareTransmission()
         pio_sm_put(g_pio.device, g_pio.id, g_nextTransmission.values[i]);
     }
     
-    pio_interrupt_clear(g_pio.device, PREP_NEXT_TRANSMISSION);
+    pio_interrupt_clear(g_pio.device, PREP_NEXT_TRANSMISSION_FLAG);
 }
 
 static void pioIsr_done()
@@ -104,7 +102,7 @@ static void pioIsr_done()
 static void pioIsr(const void* arg)
 {
     (void)arg;
-    if (pio_interrupt_get(g_pio.device, PREP_NEXT_TRANSMISSION)) pioIsr_prepareTransmission();
+    if (pio_interrupt_get(g_pio.device, PREP_NEXT_TRANSMISSION_FLAG)) pioIsr_prepareTransmission();
     if (pio_interrupt_get(g_pio.device, RX_TX_DONE_FLAG)) pioIsr_done();
 }
 

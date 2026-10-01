@@ -11,7 +11,7 @@ extern "C"
 NextSection TradeLounge::process()
 {
     connectAsMaster();
-    m_packetLayer.setTransiveHandler(sendLinkTypeCommand(LINKTYPE_TRADE));
+    m_packetLayer.sendCommand(sendLinkTypeCommand(LINKTYPE_TRADE));
     NextSection nextSection = NextSection::connection;
 
     while (!m_cancel)
@@ -24,7 +24,7 @@ NextSection TradeLounge::process()
             case LINKCMD_INIT_BLOCK:
             {
                 const struct LinkPlayerBlock* linkPlayerBlock = linkPLayer(LINKTYPE_TRADE);
-                m_packetLayer.setTransiveHandler(blockCommand(linkPlayerBlock, sizeof(*linkPlayerBlock), sizeof(*linkPlayerBlock)));
+                m_packetLayer.sendCommand(blockCommand(linkPlayerBlock, sizeof(*linkPlayerBlock), sizeof(*linkPlayerBlock)));
                 break;
             }
             
@@ -32,12 +32,12 @@ NextSection TradeLounge::process()
             {
                 if (command[1] == LINK_KEY_CODE_EXIT_ROOM)
                 {
-                    m_packetLayer.setTransiveHandler(moveCommand(LINK_KEY_CODE_EXIT_ROOM));
+                    m_packetLayer.sendCommand(moveCommand(LINK_KEY_CODE_EXIT_ROOM));
                     nextSection = NextSection::exit;
                 } 
                 if (command[1] == LINK_KEY_CODE_READY)
                 {   
-                    m_packetLayer.setTransiveHandler(moveCommand(LINK_KEY_CODE_READY));
+                    m_packetLayer.sendCommand(moveCommand(LINK_KEY_CODE_READY));
                     nextSection = NextSection::connection;
                 }
                 break;
@@ -45,7 +45,7 @@ NextSection TradeLounge::process()
             
             case LINKCMD_READY_CLOSE_LINK:
             {
-                m_packetLayer.setTransiveHandler(readyCloseLinkCommand());
+                m_packetLayer.sendCommand(readyCloseLinkCommand());
                 k_sleep(K_MSEC(200));
                 return nextSection;
             }

@@ -14,7 +14,7 @@ class UsbSection
 public:
     UsbSection(uint8_t playerSeat, uint8_t playerCount) : m_playerSeat(playerSeat), m_playerCount(playerCount)
     {
-        m_packetLayer.setTransiveHandler(usbLinkCommand(playerCount));
+        m_packetLayer.sendCommand(usbLinkCommand(playerCount));
         m_packetLayer.setSeatNumber(playerSeat);
     }
 

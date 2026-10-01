@@ -104,7 +104,7 @@ static void erProto_initPokemonPacketLayer()
     new (g_pokemonPacketStorage) PacketLayer();
     g_pokemonPacketLive = true;
     pokemonPacket().enableHandshake();
-    pokemonPacket().setTransiveHandler(emptyCommand());
+    pokemonPacket().sendCommand(emptyCommand());
     g_pokeLinkPlayerPending = false;
     g_pokePayloadPending = false;
     g_lpFinished = false;
@@ -289,7 +289,7 @@ static void pokemonArmLinkPlayerFull(PacketLayer& layer)
     erproto::buildLinkPlayerBlock(g_pokeLinkPlayerBuf, g_proxy.pokeCfg);
 
     
-    layer.setTransiveHandler(pokeLinkPlayerContCommand());
+    layer.sendCommand(pokeLinkPlayerContCommand());
     g_pokeLinkPlayerPending = true;
 }
 
@@ -324,7 +324,7 @@ static void pokemonHandleTransiveFrame(erproto::EReaderProxy& proxy,
         {
             g_lpPostWaitCount = 0;
             proxy.pokeWaitingPayload = false;
-            layer.setTransiveHandler(blockCommand(proxy.card,
+            layer.sendCommand(blockCommand(proxy.card,
                               static_cast<uint16_t>(proxy.cardSize),
                               static_cast<uint16_t>(proxy.cardSize)));
             g_pokePayloadPending = true;
@@ -334,23 +334,23 @@ static void pokemonHandleTransiveFrame(erproto::EReaderProxy& proxy,
         {
             g_lpPostWaitCount++;
             if (layer.idle())
-                layer.setTransiveHandler(emptyCommand());
+                layer.sendCommand(emptyCommand());
         }
     }
     else if (cmd == LINKCMD_READY_EXIT_STANDBY && !g_pokePayloadPending)
     {
-        layer.setTransiveHandler(readyExitStandbyCommand());
+        layer.sendCommand(readyExitStandbyCommand());
     }
     else if (cmd == LINKCMD_READY_CLOSE_LINK && proxy.pokeSentPayload && layer.idle())
     {
-        layer.setTransiveHandler(readyCloseLinkCommand());
+        layer.sendCommand(readyCloseLinkCommand());
         proxy.emitComplete(1);
     }
     else if (!g_pokeLinkPlayerPending && !g_pokePayloadPending
              && cmd == LINKCMD_SEND_HELD_KEYS
              && layer.idle())
     {
-        layer.setTransiveHandler(pokeSendKeysIdle());
+        layer.sendCommand(pokeSendKeysIdle());
     }
 
     if (g_pokeLinkPlayerPending && g_lpFinished)
@@ -360,7 +360,7 @@ static void pokemonHandleTransiveFrame(erproto::EReaderProxy& proxy,
         proxy.pokeSentLinkPlayer = true;
         g_lpPostWaitCount = 0;
         proxy.pokeWaitingPayload = true;
-        layer.setTransiveHandler(emptyCommand());
+        layer.sendCommand(emptyCommand());
     }
 
 
@@ -376,7 +376,7 @@ static void pokemonHandleTransiveFrame(erproto::EReaderProxy& proxy,
         proxy.pokeSentPayload = true;
         proxy.pokeWaitingPayload = false;
         proxy.scanArmed = false;
-        layer.setTransiveHandler(emptyCommand());
+        layer.sendCommand(emptyCommand());
     }
 }
 
@@ -446,7 +446,7 @@ void erProto_receiveHandler(std::span<const uint8_t> data, void*)
         // g_lpPostWaitCount = 0;
         //blockCommandReset();
         if (g_pokemonPacketLive)
-            pokemonPacket().setTransiveHandler(emptyCommand());
+            pokemonPacket().sendCommand(emptyCommand());
     }
 
     g_proxy.applyHostFrame(cmd, payload, payloadLen);

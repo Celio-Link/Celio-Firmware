@@ -19,7 +19,7 @@ NextSection TradeSetup::process()
     #endif
 
     #ifdef CONFIG_SECTIONS_USE_MASTER_MODE
-    m_packetLayer.setTransiveHandler(sendLinkTypeCommand(m_linkType));
+    m_packetLayer.sendCommand(sendLinkTypeCommand(m_linkType));
     #endif
     NextSection nextSection = NextSection::connection;
 
@@ -31,7 +31,7 @@ NextSection TradeSetup::process()
         #ifdef CONFIG_SECTIONS_USE_MASTER_MODE
         if (m_blockState == BlockCommandState::RequestTrainerCard && m_packetLayer.idle())
         {
-            m_packetLayer.setTransiveHandler(sendBlockCommandRequestCommand(2));
+            m_packetLayer.sendCommand(sendBlockCommandRequestCommand(2));
             m_blockState = BlockCommandState::TrainerCard;
             continue;
         }
@@ -54,14 +54,14 @@ NextSection TradeSetup::process()
                         m_blockState = BlockCommandState::TrainerCard;
                         #endif
 
-                        m_packetLayer.setTransiveHandler(blockCommand(linkPlayerBlock, sizeof(*linkPlayerBlock), sizeof(*linkPlayerBlock)));
+                        m_packetLayer.sendCommand(blockCommand(linkPlayerBlock, sizeof(*linkPlayerBlock), sizeof(*linkPlayerBlock)));
                         break;
                     }
                     
                     case BlockCommandState::TrainerCard:
                     {
                         const struct TrainerCard* trainerCard = trainerCardPlaceholder();
-                        m_packetLayer.setTransiveHandler(blockCommand(trainerCard, sizeof(*trainerCard), 0x64));
+                        m_packetLayer.sendCommand(blockCommand(trainerCard, sizeof(*trainerCard), 0x64));
                         break;
                     }
                     default: continue;
@@ -70,14 +70,14 @@ NextSection TradeSetup::process()
             }
             
             case LINKCMD_READY_EXIT_STANDBY:
-                m_packetLayer.setTransiveHandler(readyExitStandbyCommand());
+                m_packetLayer.sendCommand(readyExitStandbyCommand());
                 break;
             
             case LINKCMD_SEND_HELD_KEYS:
             {
                 if (command[1] == LINK_KEY_CODE_EXIT_ROOM)
                 {
-                    m_packetLayer.setTransiveHandler(moveCommand(LINK_KEY_CODE_EXIT_ROOM));
+                    m_packetLayer.sendCommand(moveCommand(LINK_KEY_CODE_EXIT_ROOM));
                     nextSection = NextSection::exit;
                     break;
                 }
@@ -86,13 +86,13 @@ NextSection TradeSetup::process()
 
                 if (m_movementDataIndex >= m_movementData.size()) break;
                 
-                m_packetLayer.setTransiveHandler(moveCommand(m_movementData[m_movementDataIndex]));
+                m_packetLayer.sendCommand(moveCommand(m_movementData[m_movementDataIndex]));
                 m_movementDataIndex++;
                 break;
             }
             
             case LINKCMD_READY_CLOSE_LINK:
-                m_packetLayer.setTransiveHandler(readyCloseLinkCommand());
+                m_packetLayer.sendCommand(readyCloseLinkCommand());
                 k_sleep(K_MSEC(300));
                 return nextSection;
             
