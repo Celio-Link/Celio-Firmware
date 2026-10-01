@@ -6,11 +6,9 @@
 
 #include "../link_defines.h"
 
-extern "C"
-{
-    #include "../layers/link/linkLayer.h"
-    #include "../layers//link/cableDetection/cableDetection.h"
-}
+
+#include "../layers//link/cableDetection/cableDetection.hpp"
+#include "../layers/link/linkLayer.hpp"
 
 namespace erproto
 {

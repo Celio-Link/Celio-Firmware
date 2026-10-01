@@ -5,8 +5,6 @@
 
 .define PREP_NEXT_TRANSMISSION 0
 .define RX_TX_DONE_FLAG 1
-.define NEXT_PLAYER_CHUNK 2
-.define START_TIMEOUT 2
 
 ; Between Handshake cycle -> 30097 + cyles from .wraptarget till UART start bit
 
@@ -19,37 +17,27 @@ wait_till_next_transmission:
     jmp y-- wait_till_next_transmission
 
 irq PREP_NEXT_TRANSMISSION[31] ; give irq time to fill fifo, this approach will keep timing constant
-nop[31]
 
 set pins, 0b1100 ; set SC low, martk start of complete transmission
 
+pull
+mov y osr ; seat number
 transive_loop:
-    set x, 15
-    pull
-    mov y osr
-    jmp !y done ; Transive state 0 -> done
-    pull
-    jmp y-- decrement_jump
-decrement_jump:
-    irq NEXT_PLAYER_CHUNK
-    jmp y-- receive_data_from_seat ; Transive state 1 -> receive data from seat
+    jmp y-- transmit_data_for_player
     
-    transmit_data_for_player:
-        set pins, 0b0100 [15] ; UART start bit
-
-        transmit_data:
-            out pins, SD_PIN_OUT [14]
-            jmp x-- transmit_data
-
-        set pins, 0b1100 [15] ; UART stop bit
-        jmp transive_loop
-
     receive_data_from_seat:
         set pins, 0b1000
         set pindirs, 0b0101 ; change SD to input
-        irq START_TIMEOUT
-        wait 0 pin 0 [21] ; delay to start sampling between duty cycle
+        set x, 31 ; timeout value (~500us with delay, was ~50us)
+        wait_for_rx:
+            jmp x-- check_state [7] ; decrement x, delay 8 cycles per iteration
+            check_state:
+            jmp !x receive_begin ; x is zero -> begin receive of dummy values
+            jmp pin wait_for_rx
 
+        receive_begin:
+        set x, 15 [22] ; delay to start sampling between duty cycle
+        
         receive_data:
             in pins SD_PIN_IN [14]
             jmp x-- receive_data
@@ -60,8 +48,21 @@ decrement_jump:
         set pins, 0b1100 [29]
         jmp transive_loop
 
+    transmit_data_for_player:
+        mov x, status
+        jmp !x done ; tx fifo empty
+        pull
+        set pins, 0b0100 [15] ; UART start bit
+
+        transmit_data:
+            out pins, SD_PIN_OUT [14]
+            jmp !osre transmit_data ; FIXME set shift_pull to 16
+
+        set pins, 0b1100 [15] ; UART stop bit
+        jmp transive_loop
+
 done:
-irq RX_TX_DONE_FLAG
+irq RX_TX_DONE_FLAG [31]
 
 pull ; timing value for next transmission
 mov y osr ; store in y for wait_till_next_transmission

@@ -1,14 +1,9 @@
 
 #include <cstdint>
 #include <span>
-
-extern "C"
-{
-    #include "../layers/link/multiMode/multiMode.h"
-}
-
 #include <zephyr/kernel.h>
 
+#include "../layers/link/multiMode/multiMode.hpp"
 #include "awProtocol.hpp"
 
 #pragma once

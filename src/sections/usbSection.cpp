@@ -18,21 +18,19 @@ void UsbSection::establishConncection()
         if (m_cancel) return; 
     }
 
-    switch (m_packetLayerMode)
+    if (m_playerSeat == 0)
     {
-        case PacketLayer::Mode::master:
-            while (m_packetLayer.getTransmittedHandshake() != LINK_MASTER_HANDSHAKE) 
-            { 
-                if (m_cancel) return; 
-            }
-            break;
-
-        case PacketLayer::Mode::slave:
-            while (m_packetLayer.getReceivedHandshake() != LINK_MASTER_HANDSHAKE) 
-            { 
-                if (m_cancel) return; 
-            }
-            break;
+        while (m_packetLayer.getTransmittedHandshake() != LINK_MASTER_HANDSHAKE) 
+        { 
+            if (m_cancel) return; 
+        }
+    }
+    else
+    {
+        while (m_packetLayer.getReceivedHandshake() != LINK_MASTER_HANDSHAKE) 
+        { 
+            if (m_cancel) return; 
+        }
     }
 
     sendLinkStatus(LinkStatus::LinkConnected);

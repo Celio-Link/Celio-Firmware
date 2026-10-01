@@ -1,5 +1,6 @@
 
-zephyr_library_sources_ifdef(CONFIG_SOC_FAMILY_RPI_PICO linkLayer.c)
+zephyr_library_sources_ifdef(CONFIG_SOC_FAMILY_RPI_PICO linkLayer.cpp)
+zephyr_library_sources_ifdef(CONFIG_SOC_FAMILY_RPI_PICO linkPinctrl.c)
 zephyr_library_sources_ifdef(CONFIG_SOC_FAMILY_RPI_PICO gbLinkLayer.c)
 
 add_subdirectory(cableDetection)

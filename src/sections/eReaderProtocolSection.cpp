@@ -4,18 +4,13 @@
 #include <new>
 
 #include <zephyr/sys/ring_buffer.h>
-
-#include "../callbacks/blockCommand.hpp"
-#include "../callbacks/commands.hpp"
-#include "../layers/packetLayer.hpp"
-#include "../layers/transport.hpp"
 #include "../link_defines.h"
 
-extern "C"
-{
-    #include "../layers/link/linkLayer.h"
-    #include "../layers/link/ereader/ereader.h"
-}
+#include "../layers/packet/packetCommands/commands.hpp"
+#include "../layers/packet/packetLayer.hpp"
+#include "../layers/transport.hpp"
+#include "../layers/link/ereader/ereader.hpp"
+#include "../layers/link/linkLayer.hpp"
 
 RING_BUF_DECLARE(g_erOutRing, 2048);
 
@@ -113,7 +108,7 @@ static void erProto_initPokemonPacketLayer()
     g_pokeLinkPlayerPending = false;
     g_pokePayloadPending = false;
     g_lpFinished = false;
-    blockCommandReset();
+    //blockCommandReset();
 }
 
 static void logPacketFrame(erproto::EReaderProxy& proxy,
@@ -123,160 +118,177 @@ static void logPacketFrame(erproto::EReaderProxy& proxy,
     proxy.noteWireRound(result.received[0], result.transmitted[0]);
 }
 
-static uint8_t g_pokeIdleIdx = 0;
-
-static void pokeSendKeysInit(std::span<const uint16_t>)
+struct PokeSendContext : TransmitContext
 {
-    g_pokeIdleIdx = 0;
-}
+    uint8_t pokeIdleIdx = 0;
+};
 
-static uint16_t pokeSendKeysTransive()
+static std::array<uint16_t, 3> pokeSendKeysTransive(TransmitContext* ctx)
 {
-    if (g_pokeIdleIdx == 0)
+    auto* pokeCtx = static_cast<PokeSendContext*>(ctx);
+
+    if (pokeCtx->pokeIdleIdx == 0)
     {
-        g_pokeIdleIdx++;
-        return erproto::poke::kSendKeys;
+        pokeCtx->pokeIdleIdx++;
+        return {erproto::poke::kSendKeys, 0x00, 0x00};
     }
-    g_pokeIdleIdx++;
-    if (g_pokeIdleIdx >= 8) g_pokeIdleIdx = 0;
-    return 0;
+    pokeCtx->pokeIdleIdx++;
+    if (pokeCtx->pokeIdleIdx >= 8) pokeCtx->pokeIdleIdx = 0;
+    return {0x00, 0x00, 0x00};
 }
 
-static CommandState pokeSendKeysDone()
+static CommandState pokeSendKeysDone(TransmitContext* ctx)
 {
+    (void)ctx;
     return CommandState::done;
 }
 
-static TransiveStruct pokeSendKeysIdle()
+static TransmitBehaviour pokeSendKeysIdle()
 {
-    static TransiveStruct transive
+    std::unique_ptr<PokeSendContext> c = std::make_unique<PokeSendContext>();
+    c->pokeIdleIdx = 0;
+
+    static TransmitBehaviour transive
     {
-        .init = pokeSendKeysInit,
-        .transive = pokeSendKeysTransive,
-        .transiveDone = pokeSendKeysDone
+        .context = std::move(c),
+        .transmitCallback = pokeSendKeysTransive,
+        .transmitDoneCallback = pokeSendKeysDone
     };
-    return transive;
+    return std::move(transive);
 }
 
 enum class LpPhase : uint8_t { preDelay, initFrame, postDelay, cont };
-static LpPhase  g_lpPhase         = LpPhase::preDelay;
-static uint8_t  g_lpPreDelayLeft  = 0;
-static uint8_t  g_lpPostDelayLeft = 0;
-static uint8_t  g_lpContFramesSent = 0;
-static uint8_t  g_lpFrameIdx      = 0;
-static uint16_t g_lpTxFrame[8]    = {};
 
-static void lpPrepareZeroFrame()
+
+struct PokeLinkPlayerContext : TransmitContext
+{
+    uint8_t  lpFrameIdx = 0;
+
+    LpPhase  lpPhase = LpPhase::preDelay;
+    uint8_t  lpPreDelayLeft  = 0;
+    uint8_t  lpPostDelayLeft = 0;
+    uint8_t  lpContFramesSent = 0;
+    bool     lpFinished = false;
+    uint16_t lpTxFrame[8]    = {};
+};
+
+static void lpPrepareZeroFrame(PokeLinkPlayerContext* ctx)
 {
     for (int i = 0; i < 8; i++)
-        g_lpTxFrame[i] = 0;
+    {
+        ctx->lpTxFrame[i] = 0;
+    }
 }
 
-static void lpPrepareInitFrame()
+static void lpPrepareInitFrame(PokeLinkPlayerContext* ctx)
 {
-    g_lpTxFrame[0] = LINKCMD_INIT_BLOCK;
-    g_lpTxFrame[1] = static_cast<uint16_t>(kPokeLinkPlayerBytes);
-    g_lpTxFrame[2] = static_cast<uint16_t>(LINK_PLAYER_ID);
+    ctx->lpTxFrame[0] = LINKCMD_INIT_BLOCK;
+    ctx->lpTxFrame[1] = static_cast<uint16_t>(kPokeLinkPlayerBytes);
+    ctx->lpTxFrame[2] = static_cast<uint16_t>(LINK_PLAYER_ID);
     for (int i = 3; i < 8; i++)
-        g_lpTxFrame[i] = 0;
+    {
+        ctx->lpTxFrame[i] = 0;
+    }
 }
 
-static void lpPrepareContFrame(size_t offset)
+static void lpPrepareContFrame(size_t offset, PokeLinkPlayerContext* ctx)
 {
     const size_t remaining = kPokeLinkPlayerBytes - offset;
     const size_t chunkLen = remaining < 14 ? remaining : 14;
 
-    g_lpTxFrame[0] = LINKCMD_CONT_BLOCK;
+    ctx->lpTxFrame[0] = LINKCMD_CONT_BLOCK;
     for (int i = 0; i < 7; i++)
-        g_lpTxFrame[i + 1] = 0;
+        ctx->lpTxFrame[i + 1] = 0;
 
     for (size_t i = 0; i + 1 < chunkLen; i += 2)
     {
-        g_lpTxFrame[1 + (i / 2)] = static_cast<uint16_t>(g_pokeLinkPlayerBuf[offset + i])
+        ctx->lpTxFrame[1 + (i / 2)] = static_cast<uint16_t>(g_pokeLinkPlayerBuf[offset + i])
                                | (static_cast<uint16_t>(g_pokeLinkPlayerBuf[offset + i + 1]) << 8);
     }
     if (chunkLen % 2 == 1)
-        g_lpTxFrame[1 + (chunkLen / 2)] = g_pokeLinkPlayerBuf[offset + chunkLen - 1];
+        ctx->lpTxFrame[1 + (chunkLen / 2)] = g_pokeLinkPlayerBuf[offset + chunkLen - 1];
 }
 
-static void pokeLinkPlayerContInit(std::span<const uint16_t>)
+static std::array<uint16_t, 3> pokeLinkPlayerContTransive(TransmitContext* ctx)
 {
-    g_lpFrameIdx = 0;
+    auto* pokeCtx = static_cast<PokeLinkPlayerContext*>(ctx);
+    return {pokeCtx->lpTxFrame[pokeCtx->lpFrameIdx++], 0x00, 0x00};
 }
 
-static uint16_t pokeLinkPlayerContTransive()
+static CommandState pokeLinkPlayerContDone(TransmitContext* ctx)
 {
-    return g_lpTxFrame[g_lpFrameIdx++];
-}
+    auto* pokeCtx = static_cast<PokeLinkPlayerContext*>(ctx);
+    pokeCtx->lpFrameIdx = 0;
 
-static CommandState pokeLinkPlayerContDone()
-{
-    g_lpFrameIdx = 0;
-
-    switch (g_lpPhase)
+    switch (pokeCtx->lpPhase)
     {
         case LpPhase::preDelay:
-            if (--g_lpPreDelayLeft > 0)
-                lpPrepareZeroFrame();
+            if (--pokeCtx->lpPreDelayLeft > 0)
+                lpPrepareZeroFrame(pokeCtx);
             else
             {
-                g_lpPhase = LpPhase::initFrame;
-                lpPrepareInitFrame();
+                pokeCtx->lpPhase = LpPhase::initFrame;
+                lpPrepareInitFrame(pokeCtx);
             }
             break;
 
         case LpPhase::initFrame:
-            g_lpPhase = LpPhase::postDelay;
-            g_lpPostDelayLeft = 2;
-            lpPrepareZeroFrame();
+            pokeCtx->lpPhase = LpPhase::postDelay;
+            pokeCtx->lpPostDelayLeft = 2;
+            lpPrepareZeroFrame(pokeCtx);
             break;
 
         case LpPhase::postDelay:
-            if (--g_lpPostDelayLeft > 0)
-                lpPrepareZeroFrame();
+            if (--pokeCtx->lpPostDelayLeft > 0)
+                lpPrepareZeroFrame(pokeCtx);
             else
             {
-                g_lpPhase = LpPhase::cont;
-                g_lpContFramesSent = 0;
-                lpPrepareContFrame(0);
+                pokeCtx->lpPhase = LpPhase::cont;
+                pokeCtx->lpContFramesSent = 0;
+                lpPrepareContFrame(0, pokeCtx);
             }
             break;
 
         case LpPhase::cont:
-            g_lpContFramesSent++;
-            if (g_lpContFramesSent >= 5)
+            pokeCtx->lpContFramesSent++;
+            if (pokeCtx->lpContFramesSent >= 5)
             {
-                g_lpFinished = true;
+                pokeCtx->lpFinished = true;
+                g_lpFinished = true; //FIXME
                 return CommandState::done;
             }
-            lpPrepareContFrame(static_cast<size_t>(g_lpContFramesSent) * 14);
+            lpPrepareContFrame(static_cast<size_t>(pokeCtx->lpContFramesSent) * 14, pokeCtx);
             break;
     }
 
     return CommandState::resume;
 }
 
-static TransiveStruct pokeLinkPlayerContCommand()
+static TransmitBehaviour pokeLinkPlayerContCommand()
 {
-    static TransiveStruct transive
+    std::unique_ptr<PokeLinkPlayerContext> c = std::make_unique<PokeLinkPlayerContext>();
+    c->lpPhase         = LpPhase::preDelay;
+    c->lpPreDelayLeft  = 2;
+    c->lpPostDelayLeft = 2;
+    c->lpContFramesSent = 0;
+    c->lpFinished      = false;
+    c->lpFrameIdx      = 0;
+    lpPrepareZeroFrame(c.get());
+
+    static TransmitBehaviour transive
     {
-        .init = pokeLinkPlayerContInit,
-        .transive = pokeLinkPlayerContTransive,
-        .transiveDone = pokeLinkPlayerContDone
+        .context = std::move(c),
+        .transmitCallback = pokeLinkPlayerContTransive,
+        .transmitDoneCallback = pokeLinkPlayerContDone
     };
-    return transive;
+    return std::move(transive);
 }
 
 static void pokemonArmLinkPlayerFull(PacketLayer& layer)
 {
     erproto::buildLinkPlayerBlock(g_pokeLinkPlayerBuf, g_proxy.pokeCfg);
-    g_lpPhase         = LpPhase::preDelay;
-    g_lpPreDelayLeft  = 2;
-    g_lpPostDelayLeft = 2;
-    g_lpContFramesSent = 0;
-    g_lpFinished      = false;
-    g_lpFrameIdx      = 0;
-    lpPrepareZeroFrame();
+
+    
     layer.setTransiveHandler(pokeLinkPlayerContCommand());
     g_pokeLinkPlayerPending = true;
 }
@@ -312,10 +324,9 @@ static void pokemonHandleTransiveFrame(erproto::EReaderProxy& proxy,
         {
             g_lpPostWaitCount = 0;
             proxy.pokeWaitingPayload = false;
-            blockCommandSetup(proxy.card,
+            layer.setTransiveHandler(blockCommand(proxy.card,
                               static_cast<uint16_t>(proxy.cardSize),
-                              static_cast<uint16_t>(proxy.cardSize));
-            layer.setTransiveHandler(blockCommand());
+                              static_cast<uint16_t>(proxy.cardSize)));
             g_pokePayloadPending = true;
             proxy.emitPhase(erproto::Phase::sending);
         }
@@ -352,11 +363,15 @@ static void pokemonHandleTransiveFrame(erproto::EReaderProxy& proxy,
         layer.setTransiveHandler(emptyCommand());
     }
 
-    if (g_pokePayloadPending && blockCommandTransferComplete()
-        && blockCommandBytesSent() >= static_cast<uint16_t>(proxy.cardSize)
-        && layer.idle())
+
+    //FIXME idle should be enoght to tell if command has been send in full?
+    // if (g_pokePayloadPending && blockCommandTransferComplete()
+    //     && blockCommandBytesSent() >= static_cast<uint16_t>(proxy.cardSize)
+    //     && layer.idle())
+    // Also, empty is set automaticly by packetLayer
+    if (layer.idle())
     {
-        blockCommandConsumeComplete();
+        //blockCommandConsumeComplete();
         g_pokePayloadPending = false;
         proxy.pokeSentPayload = true;
         proxy.pokeWaitingPayload = false;
@@ -380,7 +395,7 @@ static void pokemonPumpPacketLayer()
 
 static struct NextTransmit sma4TransmitCallback(void*)
 {
-    return { g_proxy.stagedTx, 15370 };
+    return {2, 1, {g_proxy.stagedTx, 0x00, 0x00}, 15370 };
 }
 
 static void sma4ReceiveCallback(uint16_t rx, void*)
@@ -423,12 +438,13 @@ void erProto_receiveHandler(std::span<const uint8_t> data, void*)
         g_pokeLinkPlayerPending = false;
         g_pokePayloadPending = false;
         g_lpFinished = false;
-        g_lpPhase = LpPhase::preDelay;
-        g_lpPreDelayLeft = 0;
-        g_lpPostDelayLeft = 0;
-        g_lpContFramesSent = 0;
-        g_lpPostWaitCount = 0;
-        blockCommandReset();
+        //context is reset automaticlly when new command is run, no need to reset
+        // g_lpPhase = LpPhase::preDelay;
+        // g_lpPreDelayLeft = 0;
+        // g_lpPostDelayLeft = 0;
+        // g_lpContFramesSent = 0;
+        // g_lpPostWaitCount = 0;
+        //blockCommandReset();
         if (g_pokemonPacketLive)
             pokemonPacket().setTransiveHandler(emptyCommand());
     }

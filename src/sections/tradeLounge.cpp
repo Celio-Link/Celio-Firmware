@@ -4,7 +4,8 @@ extern "C"
     #include "../payloads/trainerCard.h"
     #include "../payloads/linkPlayer.h"
 }
-#include "../callbacks/commands.hpp"
+
+#include "../layers/packet/packetCommands/commands.hpp"
 #include <algorithm>
 
 NextSection TradeLounge::process()
@@ -22,10 +23,8 @@ NextSection TradeLounge::process()
         {
             case LINKCMD_INIT_BLOCK:
             {
-                auto transive = blockCommand();
                 const struct LinkPlayerBlock* linkPlayerBlock = linkPLayer(LINKTYPE_TRADE);
-                blockCommandSetup(linkPlayerBlock, sizeof(*linkPlayerBlock), sizeof(*linkPlayerBlock));
-                m_packetLayer.setTransiveHandler(transive);
+                m_packetLayer.setTransiveHandler(blockCommand(linkPlayerBlock, sizeof(*linkPlayerBlock), sizeof(*linkPlayerBlock)));
                 break;
             }
             
@@ -33,14 +32,12 @@ NextSection TradeLounge::process()
             {
                 if (command[1] == LINK_KEY_CODE_EXIT_ROOM)
                 {
-                    moveCommandInit(LINK_KEY_CODE_EXIT_ROOM);
-                    m_packetLayer.setTransiveHandler(moveCommand());
+                    m_packetLayer.setTransiveHandler(moveCommand(LINK_KEY_CODE_EXIT_ROOM));
                     nextSection = NextSection::exit;
                 } 
                 if (command[1] == LINK_KEY_CODE_READY)
                 {   
-                    moveCommandInit(LINK_KEY_CODE_READY);
-                    m_packetLayer.setTransiveHandler(moveCommand());
+                    m_packetLayer.setTransiveHandler(moveCommand(LINK_KEY_CODE_READY));
                     nextSection = NextSection::connection;
                 }
                 break;

@@ -1,1 +1,1 @@
-zephyr_library_sources(ereader.c)
+zephyr_library_sources(ereader.cpp)

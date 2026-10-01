@@ -5,7 +5,7 @@ extern "C"
     #include "../payloads/linkPlayer.h"
 }
 
-#include "../callbacks/commands.hpp"
+#include "../layers/packet/packetCommands/commands.hpp"
 
 
 void TradeDisconnect::exchangeTrainerData()
@@ -22,8 +22,7 @@ void TradeDisconnect::exchangeTrainerData()
         {
             
             const struct LinkPlayerBlock* linkPlayerBlock = linkPLayer(LINKTYPE_TRADE_DISCONNECTED);
-            blockCommandSetup(linkPlayerBlock, sizeof(*linkPlayerBlock), sizeof(*linkPlayerBlock));
-            m_packetLayer.setTransiveHandler(blockCommand());
+            m_packetLayer.setTransiveHandler(blockCommand(linkPlayerBlock, sizeof(*linkPlayerBlock), sizeof(*linkPlayerBlock)));
             m_blockState = BlockCommandState::LinkPlayer;        
         }
 
@@ -46,8 +45,7 @@ NextSection TradeDisconnect::handleDisconnect()
         if (m_blockState == BlockCommandState::FinishTrade)
         {
             std::array<uint16_t, 2> command = {LINKCMD_CONFIRM_FINISH_TRADE};
-            blockCommandSetup(command.data(), command.size(), 20);
-            m_packetLayer.setTransiveHandler(blockCommand());
+            m_packetLayer.setTransiveHandler(blockCommand(command.data(), command.size(), 20));
 
             m_blockState = BlockCommandState::None;
 
@@ -66,8 +64,7 @@ NextSection TradeDisconnect::handleDisconnect()
                 if (command[1] == LINKCMD_READY_FINISH_TRADE)
                 {
                     std::array<uint16_t, 2> command = {LINKCMD_READY_FINISH_TRADE};
-                    blockCommandSetup(command.data(), command.size(), 20);
-                    m_packetLayer.setTransiveHandler(blockCommand());
+                    m_packetLayer.setTransiveHandler(blockCommand(command.data(), command.size(), 20));
                     m_blockState = BlockCommandState::FinishTrade;
                     
                 }

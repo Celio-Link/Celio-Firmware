@@ -1,11 +1,8 @@
 #include "eReader.hpp"
 #include "../linkStatus.hpp"
 #include "../sections/eReaderProtocolSection.hpp"
+#include "../layers/link/ereader/ereader.hpp"
 
-extern "C"
-{
-    #include "../layers/link/ereader/ereader.h"
-}
 
 EReaderModule::EReaderModule(erproto::Profile profile)
     : m_profile(profile)

@@ -1,5 +1,5 @@
 
-#include "../layers/packetLayer.hpp"
+#include "../layers/packet/packetLayer.hpp"
 #include "../layers/usbLayer.hpp"
 #include "../layers/transport.hpp"
 
@@ -12,10 +12,10 @@
 class UsbSection
 {
 public:
-    UsbSection(PacketLayer::Mode mode) : m_packetLayerMode(mode)
+    UsbSection(uint8_t playerSeat, uint8_t playerCount) : m_playerSeat(playerSeat), m_playerCount(playerCount)
     {
-        m_packetLayer.setTransiveHandler(usbLinkCommand());
-        m_packetLayer.setMode(m_packetLayerMode);
+        m_packetLayer.setTransiveHandler(usbLinkCommand(playerCount));
+        m_packetLayer.setSeatNumber(playerSeat);
     }
 
     bool process();
@@ -30,7 +30,7 @@ public:
 
     void connectLink() 
     { 
-        if (m_packetLayer.getMode() == PacketLayer::Mode::master) m_packetLayer.connectHandshake();
+        if (m_playerSeat == 0) m_packetLayer.connectHandshake();
     }
 
 private:
@@ -104,5 +104,6 @@ private:
     size_t m_noDirectionCommandStreak = 0;
 
     PacketLayer m_packetLayer;
-    PacketLayer::Mode m_packetLayerMode;
+    uint8_t m_playerSeat;
+    uint8_t m_playerCount;
 };

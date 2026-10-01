@@ -1,10 +1,7 @@
 #include "persist.hpp"
 #include "hardware.hpp"
+#include "layers/link/cableDetection/cableDetection.hpp" // CABLE_* selection values
 
-extern "C"
-{
-    #include "layers/link/cableDetection/cableDetection.h" // CABLE_* selection values
-}
 
 #include <cstring>
 #include <zephyr/storage/flash_map.h>

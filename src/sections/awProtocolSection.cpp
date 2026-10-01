@@ -9,10 +9,9 @@
 #include "../layers/transport.hpp"
 #include "../linkStatus.hpp"
 
-extern "C"
-{
-    #include "../layers/link/linkLayer.h"
-}
+
+#include "../layers/link/linkLayer.hpp"
+
 
 // Outbound MAW1 byte stream. Single producer (PIO done-ISR), single consumer
 // (process() thread) — the safe concurrent use of a Zephyr ring_buf.

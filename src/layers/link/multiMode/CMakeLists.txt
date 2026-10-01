@@ -1,1 +1,1 @@
-zephyr_library_sources(multiMode.c)
+zephyr_library_sources(multiMode.cpp)

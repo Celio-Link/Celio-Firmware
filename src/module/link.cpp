@@ -1,6 +1,6 @@
 #include "link.hpp"
 #include "../linkStatus.hpp"
-#include "../callbacks/commands.hpp"
+#include "../layers/packet/packetCommands/commands.hpp"
 
 #include "syscalls/kernel.h"
 #include "zephyr/kernel.h"
@@ -17,7 +17,7 @@ void LinkModule::execute()
     while (keepAlive && !m_cancel)
     {
         {
-            UsbSection section(m_packetLayerMode);
+            UsbSection section(m_seatNumber, m_playerCount);
             m_currentSection = &section;
             keepAlive = section.process();
         }

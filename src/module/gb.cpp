@@ -4,10 +4,11 @@
 #include "../persist.hpp"
 #include "../layers/usbLayer.hpp"
 #include "../layers/transport.hpp"
+#include "../layers/link/linkLayer.hpp"
+
 extern "C"
 {
     #include "../layers/link/gbLinkLayer.h"
-    #include "../layers/link/linkLayer.h"
     #include "hardware/gpio.h"
     #include "hardware/timer.h"
 }

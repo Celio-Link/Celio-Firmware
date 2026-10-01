@@ -2,7 +2,6 @@
 
 #include "hardware/pio.h"
 #include "hardware/gpio.h"
-#include "hardware/clocks.h"
 #include "hardware/timer.h"
 #include <zephyr/drivers/misc/pio_rpi_pico/pio_rpi_pico.h>
 

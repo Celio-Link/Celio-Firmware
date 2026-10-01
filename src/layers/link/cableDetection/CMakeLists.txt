@@ -1,1 +1,1 @@
-zephyr_library_sources(cableDetection.c)
+zephyr_library_sources(cableDetection.cpp)

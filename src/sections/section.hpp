@@ -1,5 +1,5 @@
 
-#include "../layers/packetLayer.hpp"
+#include "../layers/packet/packetLayer.hpp"
 #include "nextSectionState.hpp"
 #include "syscalls/kernel.h"
 
@@ -23,7 +23,7 @@ protected:
 
     inline void connectAsMaster()
     {
-        m_packetLayer.setMode(PacketLayer::Mode::master);
+        m_packetLayer.setSeatNumber(0);
 
         while(m_packetLayer.getReceivedHandshake() != LINK_SLAVE_HANDSHAKE) 
         {
@@ -38,7 +38,7 @@ protected:
 
     inline void connectAsSlave()
     {
-        m_packetLayer.setMode(PacketLayer::Mode::slave);
+        m_packetLayer.setSeatNumber(1);
 
         while(m_packetLayer.getReceivedHandshake() != LINK_SLAVE_HANDSHAKE) 
         {

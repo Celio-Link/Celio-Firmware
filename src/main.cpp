@@ -2,7 +2,7 @@
 
 #include "control.hpp"
 
-#include "./layers/packetLayer.hpp"
+#include "./layers/packet/packetLayer.hpp"
 
 #include "link_defines.h"
 

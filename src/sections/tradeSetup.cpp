@@ -6,7 +6,7 @@ extern "C"
     #include "../payloads/linkPlayer.h"
 }
 
-#include "../callbacks/commands.hpp"
+#include "../layers/packet/packetCommands/commands.hpp"
 
 #include <zephyr/drivers/gpio.h>
 
@@ -42,32 +42,30 @@ NextSection TradeSetup::process()
 
             case LINKCMD_INIT_BLOCK:
             {
-                auto transive = blockCommand();
-
                 switch(m_blockState)
                 {
                     case BlockCommandState::LinkPlayer:
                     {
                         const struct LinkPlayerBlock* linkPlayerBlock = linkPLayer(m_linkType);
-                        blockCommandSetup(linkPlayerBlock, sizeof(*linkPlayerBlock), sizeof(*linkPlayerBlock));
 
                         #ifdef CONFIG_SECTIONS_USE_MASTER_MODE
                         m_blockState = BlockCommandState::RequestTrainerCard;
                         #else
                         m_blockState = BlockCommandState::TrainerCard;
                         #endif
+
+                        m_packetLayer.setTransiveHandler(blockCommand(linkPlayerBlock, sizeof(*linkPlayerBlock), sizeof(*linkPlayerBlock)));
                         break;
                     }
                     
                     case BlockCommandState::TrainerCard:
                     {
                         const struct TrainerCard* trainerCard = trainerCardPlaceholder();
-                        blockCommandSetup(trainerCard, sizeof(*trainerCard), 0x64);
+                        m_packetLayer.setTransiveHandler(blockCommand(trainerCard, sizeof(*trainerCard), 0x64));
                         break;
                     }
                     default: continue;
                 } 
-                m_packetLayer.setTransiveHandler(transive);
                 break;
             }
             
@@ -79,8 +77,7 @@ NextSection TradeSetup::process()
             {
                 if (command[1] == LINK_KEY_CODE_EXIT_ROOM)
                 {
-                    moveCommandInit(LINK_KEY_CODE_EXIT_ROOM);
-                    m_packetLayer.setTransiveHandler(moveCommand());
+                    m_packetLayer.setTransiveHandler(moveCommand(LINK_KEY_CODE_EXIT_ROOM));
                     nextSection = NextSection::exit;
                     break;
                 }
@@ -89,8 +86,7 @@ NextSection TradeSetup::process()
 
                 if (m_movementDataIndex >= m_movementData.size()) break;
                 
-                moveCommandInit(m_movementData[m_movementDataIndex]);
-                m_packetLayer.setTransiveHandler(moveCommand());
+                m_packetLayer.setTransiveHandler(moveCommand(m_movementData[m_movementDataIndex]));
                 m_movementDataIndex++;
                 break;
             }
