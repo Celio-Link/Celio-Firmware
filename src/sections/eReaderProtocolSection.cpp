@@ -115,7 +115,8 @@ static void logPacketFrame(erproto::EReaderProxy& proxy,
                            const PacketLayer::TransiveResult& result)
 {
     if (!proxy.wireLogEnabled) return;
-    proxy.noteWireRound(result.received[0], result.transmitted[0][0]);
+    TxValues txValues = result.transmitted[0];
+    proxy.noteWireRound(result.received[0], txValues[0]);
 }
 
 struct PokeSendContext : TransmitContext
@@ -123,18 +124,23 @@ struct PokeSendContext : TransmitContext
     uint8_t pokeIdleIdx = 0;
 };
 
-static std::array<uint16_t, 3> pokeSendKeysTransive(TransmitContext* ctx)
+static TxValues pokeSendKeysTransive(TransmitContext* ctx)
 {
     auto* pokeCtx = static_cast<PokeSendContext*>(ctx);
+    TxValues txValues;
 
     if (pokeCtx->pokeIdleIdx == 0)
     {
         pokeCtx->pokeIdleIdx++;
-        return {erproto::poke::kSendKeys, 0x00, 0x00};
+        txValues.push(erproto::poke::kSendKeys);
+    }
+    else 
+    {
+        txValues.push(0x00);
     }
     pokeCtx->pokeIdleIdx++;
     if (pokeCtx->pokeIdleIdx >= 8) pokeCtx->pokeIdleIdx = 0;
-    return {0x00, 0x00, 0x00};
+    return txValues;
 }
 
 static CommandState pokeSendKeysDone(TransmitContext* ctx)
@@ -209,10 +215,12 @@ static void lpPrepareContFrame(size_t offset, PokeLinkPlayerContext* ctx)
         ctx->lpTxFrame[1 + (chunkLen / 2)] = g_pokeLinkPlayerBuf[offset + chunkLen - 1];
 }
 
-static std::array<uint16_t, 3> pokeLinkPlayerContTransive(TransmitContext* ctx)
+static TxValues pokeLinkPlayerContTransive(TransmitContext* ctx)
 {
     auto* pokeCtx = static_cast<PokeLinkPlayerContext*>(ctx);
-    return {pokeCtx->lpTxFrame[pokeCtx->lpFrameIdx++], 0x00, 0x00};
+    TxValues txValues;
+    txValues.push(pokeCtx->lpTxFrame[pokeCtx->lpFrameIdx++]);
+    return txValues;
 }
 
 static CommandState pokeLinkPlayerContDone(TransmitContext* ctx)
@@ -395,7 +403,9 @@ static void pokemonPumpPacketLayer()
 
 static struct NextTransmit sma4TransmitCallback(void*)
 {
-    return {2, 1, {g_proxy.stagedTx, 0x00, 0x00}, 15370 };
+    TxValues txValues;
+    txValues.push(g_proxy.stagedTx);
+    return {1, txValues, 15370 };
 }
 
 static void sma4ReceiveCallback(uint16_t rx, void*)

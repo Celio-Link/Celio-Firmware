@@ -287,7 +287,7 @@ struct EReaderProxy
                  static_cast<uint16_t>(pins));
     }
 
-    void noteWireRound(uint16_t rx, uint16_t tx)
+    void noteWireRound(uint16_t rx, const uint16_t tx)
     {
         if (!wireLogEnabled) return;
 

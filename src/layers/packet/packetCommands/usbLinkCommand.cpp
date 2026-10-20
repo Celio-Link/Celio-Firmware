@@ -4,8 +4,7 @@
 #include "zephyr/kernel.h"
 #include <cstdint>
 #include <cstring>
-#include <optional>
-#include <algorithm>
+#include <span>
 
 static constexpr uint8_t packetSize = 17;
 static constexpr uint8_t dataCountOffset = 1;
@@ -73,10 +72,10 @@ static void loadNextPacket(TransmitContext* ctx)
     }
 }
 
-static std::array<uint16_t, 3> usbLinkTransive(TransmitContext* ctx)
+static TxValues usbLinkTransmit(TransmitContext* ctx)
 {   
     auto* usbCtx = static_cast<UsbLinkContext*>(ctx);
-    std::array<uint16_t, 3> ret = {};
+    TxValues txValues;
 
     bool packedShifted = false;
     for (uint8_t i = 0; i < usbCtx->simulatedPartnereCount; i++)
@@ -84,18 +83,22 @@ static std::array<uint16_t, 3> usbLinkTransive(TransmitContext* ctx)
         SeatQueueStatus* seatQueue = &g_seatPacketQueues[i];
         if (!seatQueue->packetAvailable)
         {
-            ret[i] = 0x00;
+            txValues.push(0x00);
             continue;
         }
         
-        ret[i] = seatQueue->currentPacket[usbCtx->index];
+        uint16_t seatValue = (seatQueue->currentPacket[usbCtx->index]);
         packedShifted = true;
 
         // TODO Why does this happen? Only observed on Reconnect and only from slaves -> master and is concistent, so no random flip
-        if (usbCtx->index == 0 && (ret[i] == 0xFF02 || ret[i] == 0xFF06 || ret[i] == 0xFF07))
+        if (usbCtx->index == 0 && (seatValue == 0xFF02 || seatValue == 0xFF06 || seatValue == 0xFF07))
         {
-            ret[i] = 0x5FFF;
-        } 
+            txValues.push(0x5FFF);
+        }
+        else 
+        {
+            txValues.push(seatValue);
+        }
         
         if (usbCtx->index == 7)
         {
@@ -105,7 +108,7 @@ static std::array<uint16_t, 3> usbLinkTransive(TransmitContext* ctx)
 
     if (packedShifted) usbCtx->index++; 
     if (usbCtx->index == 8) usbCtx->index = 0;
-    return ret;
+    return txValues;
 }
 
 TransmitBehaviour usbLinkCommand(uint8_t otherPlayerCount)
@@ -125,7 +128,7 @@ TransmitBehaviour usbLinkCommand(uint8_t otherPlayerCount)
     static TransmitBehaviour transive
     {
         .context = std::move(p),
-        .transmitCallback = usbLinkTransive,
+        .transmitCallback = usbLinkTransmit,
         .transmitDoneCallback = [](TransmitContext* ctx) 
         {
             loadNextPacket(ctx);

@@ -1,10 +1,12 @@
 #include "emptyCommand.hpp"
+#include "TransiveStruct.hpp"
 
-std::array<uint16_t, 3> emptyCommandTransive(TransmitContext* ctx)
+TxValues emptyCommandTransive(TransmitContext* ctx)
 {
     (void)ctx;
-    std::array<uint16_t, 3> ret = {};
-    return ret;
+    TxValues txValues;
+    txValues.push(0x00);
+    return txValues;
 }
 
 TransmitBehaviour emptyCommand()

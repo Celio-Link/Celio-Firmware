@@ -18,7 +18,7 @@ void UsbSection::establishConncection()
         if (m_cancel) return; 
     }
 
-    if (m_playerSeat == 0)
+    if (m_playerSeat != 0)
     {
         while (m_packetLayer.getTransmittedHandshake()[0] != LINK_MASTER_HANDSHAKE) 
         { 
@@ -54,7 +54,7 @@ bool UsbSection::process()
             keepAlive = false;
         } 
 
-        if (result.transmitted[0][0] == LINKCMD_SEND_HELD_KEYS && result.transmitted[0][1] == LINK_KEY_CODE_EXIT_ROOM)
+        if (result.transmitted[0][0] == LINKCMD_SEND_HELD_KEYS && result.transmitted[1][0] == LINK_KEY_CODE_EXIT_ROOM)
         {
             keepAlive = false;
         }
@@ -66,7 +66,7 @@ bool UsbSection::process()
 
         for (int i = 0; i < m_playerCount - 1; i++)
         {
-            if (result.transmitted[i][0] == LINKCMD_READY_CLOSE_LINK)
+            if (result.transmitted[0][i] == LINKCMD_READY_CLOSE_LINK)
             {
                 partnerReadyCloseLink[i] = true;
             }

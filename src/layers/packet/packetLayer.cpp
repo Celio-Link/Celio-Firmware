@@ -4,18 +4,18 @@
 #include "syscalls/kernel.h"
 #include <cerrno>
 
-void PacketLayer::onTransiveDone(uint16_t rxBytes, std::array<uint16_t, 3> txBytes)
+void PacketLayer::onTransiveDone(uint16_t rxBytes, TxValues txValues)
 {
     switch (m_state)
     {
         case TransiveState::handshake:
-            m_transmitedHandShake = txBytes;
+            m_transmitedHandShake = txValues;
             m_receivedHandshake = rxBytes;
             k_sem_give(&m_handshakeSemaphore);
             m_timingUs = timingHandshake;
 
             if (rxBytes == LINK_MASTER_HANDSHAKE 
-                || txBytes[0] == LINK_MASTER_HANDSHAKE)
+                || txValues[0] == LINK_MASTER_HANDSHAKE)
             {
                 m_state = TransiveState::crc;
                 m_timingUs = timingCommandBytes;

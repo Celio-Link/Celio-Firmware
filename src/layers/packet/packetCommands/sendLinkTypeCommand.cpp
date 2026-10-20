@@ -7,32 +7,32 @@ struct SendLinkTypeContext : TransmitContext
     uint16_t type = 0;
 };
 
-static std::array<uint16_t, 3> sendLinkTypeCommandTransive(TransmitContext* ctx)
+TxValues sendLinkTypeCommandTransive(TransmitContext* ctx)
 {
     auto* usbCtx = static_cast<SendLinkTypeContext*>(ctx);
-    std::array<uint16_t, 3> ret = {};
+    TxValues txValues;
 
     switch(usbCtx->index)
     {
         case 0:
             usbCtx->index++;
-            ret[0] = LINKCMD_SEND_LINK_TYPE;
+            txValues.push(LINKCMD_SEND_LINK_TYPE);
             break;
         case 1:
             usbCtx->index++;
-            ret[0] = usbCtx->type;
+            txValues.push(usbCtx->type);
             break;
         case 7:
             usbCtx->index = 0;
-            ret[0] = 0x00;
+            txValues.push(0x00);
             break;
         default:
             usbCtx->index++;
-            ret[0] = 0x00;
+            txValues.push(0x00);
             break;
     }
 
-    return ret;
+    return txValues;
 }
 
 TransmitBehaviour sendLinkTypeCommand(uint16_t type)

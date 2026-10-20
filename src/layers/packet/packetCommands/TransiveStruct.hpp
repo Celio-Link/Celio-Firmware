@@ -1,7 +1,7 @@
 
 #include <memory>
-#include <optional>
-#include <span>
+#include <array>
+#include "../../../common.hpp"
 
 #pragma once
 
@@ -19,7 +19,7 @@ struct TransmitContext
 class TransmitBehaviour
 {
 public:
-    using TransiveCallback = std::array<uint16_t, 3>(*)(TransmitContext*);
+    using TransiveCallback = TxValues(*)(TransmitContext*);
     using TransiveDoneCallback = CommandState(*)(TransmitContext*);
 
     std::unique_ptr<TransmitContext> context;
@@ -27,7 +27,7 @@ public:
     TransiveCallback transmitCallback;
     TransiveDoneCallback transmitDoneCallback;
 
-    std::array<uint16_t, 3> transmit()
+    TxValues transmit()
     {
         return transmitCallback(context.get());
     }

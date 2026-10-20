@@ -6,28 +6,28 @@ struct SendExitStandbyContext : TransmitContext
     uint8_t index = 0;
 };
 
-std::array<uint16_t, 3> readyExitStandbyCommandTransive(TransmitContext* ctx)
+TxValues readyExitStandbyCommandTransive(TransmitContext* ctx)
 {
     auto* usbCtx = static_cast<SendExitStandbyContext*>(ctx);
-    std::array<uint16_t, 3> ret = {};
+    TxValues txValues;
 
     switch(usbCtx->index)
     {
         case 0:
             usbCtx->index++;
-            ret[0] = LINKCMD_READY_EXIT_STANDBY;
+            txValues.push(LINKCMD_READY_EXIT_STANDBY);
             break;
         case 7:
             usbCtx->index = 0;
-            ret[0] = 0x00;
+            txValues.push(0x00);
             break;
         default:
             usbCtx->index++;
-            ret[0] = 0x00;
+            txValues.push(0x00);
             break;
     }
 
-    return ret;
+    return txValues;
 }
 
 TransmitBehaviour readyExitStandbyCommand()

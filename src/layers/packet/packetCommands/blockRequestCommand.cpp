@@ -1,4 +1,5 @@
 #include "blockRequestCommand.hpp"
+#include "TransiveStruct.hpp"
 
 struct BlockRequestContext : TransmitContext
 {
@@ -7,11 +8,11 @@ struct BlockRequestContext : TransmitContext
 };
 
 
-std::array<uint16_t, 3> blockRequestTransive(TransmitContext* ctx)
+TxValues blockRequestTransive(TransmitContext* ctx)
 {
     auto* blockCtx = static_cast<BlockRequestContext*>(ctx);
-    uint16_t value = blockCtx->blockCommandContent[blockCtx->index];
-    std::array<uint16_t, 3> ret = {value, 0x00, 0x00};
+    TxValues txValues;
+    txValues.push(blockCtx->blockCommandContent[blockCtx->index]);
 
     blockCtx->index++;
     if (blockCtx->index == 8)
@@ -19,7 +20,7 @@ std::array<uint16_t, 3> blockRequestTransive(TransmitContext* ctx)
         blockCtx->index = 0;
     } 
 
-    return ret;
+    return txValues;
 }
 
 TransmitBehaviour blockRequest()

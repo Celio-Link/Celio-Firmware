@@ -7,32 +7,32 @@ struct MoveContext : TransmitContext
     uint16_t move;
 };
 
-static std::array<uint16_t, 3> moveCommandTransive(TransmitContext* ctx)
+TxValues moveCommandTransive(TransmitContext* ctx)
 {
     auto* moveCtx = static_cast<MoveContext*>(ctx);
-    std::array<uint16_t, 3> ret = {};
+    TxValues txValues;
 
     switch(moveCtx->index)
     {
         case 0:
             moveCtx->index++;
-            ret[0] = 0xCAFE;
+            txValues.push(0xCAFE);
             break;
         case 1:
             moveCtx->index++;
-            ret[0] = moveCtx->move;
+            txValues.push(moveCtx->move);
             break;
         case 7:
             moveCtx->index = 0;
-            ret[0] = 0x00;
+            txValues.push(0x00);
             break;
         default:
             moveCtx->index++;
-            ret[0] = 0x00;
+            txValues.push(0x00);
             break;
     }
 
-    return ret;
+    return txValues;
 }
 
 TransmitBehaviour moveCommand(int16_t data)

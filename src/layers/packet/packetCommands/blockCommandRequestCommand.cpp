@@ -7,32 +7,32 @@ struct BloclCommandRequestContext : TransmitContext
     uint16_t type = 0;
 };
 
-std::array<uint16_t, 3> blockCommandRequestTransive(TransmitContext* ctx)
+TxValues blockCommandRequestTransive(TransmitContext* ctx)
 {
     auto* blkCxt = static_cast<BloclCommandRequestContext*>(ctx);
-    std::array<uint16_t, 3> ret = {};
+    TxValues txValues;
 
     switch(blkCxt->index)
     {
         case 0:
             blkCxt->index++;
-            ret[0] = LINKCMD_SEND_LINK_TYPE;
+            txValues.push(LINKCMD_SEND_LINK_TYPE);
             break;
         case 1:
             blkCxt->index++;
-            ret[0] = blkCxt->type;
+            txValues.push(blkCxt->type);
             break;
         case 7:
             blkCxt->index = 0;
-            ret[0] = 0x00;
+            txValues.push(0x00);
             break;
         default:
             blkCxt->index++;
-            ret[0] = 0x00;
+            txValues.push(0x00);
             break;
     }
 
-    return ret;
+    return txValues;
 }
 
 TransmitBehaviour sendBlockCommandRequestCommand(uint16_t type)

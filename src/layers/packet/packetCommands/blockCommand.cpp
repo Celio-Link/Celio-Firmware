@@ -59,14 +59,13 @@ CommandState blockCommandChunk(TransmitContext* ctx)
 //     g_transferComplete = false;
 // }
 
-static std::array<uint16_t, 3>  blockCommandTransive(TransmitContext* ctx)
+static TxValues blockCommandTransive(TransmitContext* ctx)
 {
     auto* blockCtx = static_cast<BlockCommandContext*>(ctx);
-    std::array<uint16_t, 3> ret = {};
+    TxValues txValues;
 
-    ret[0] = blockCtx->initSend ? blockCtx->blockCommandContent[blockCtx->index] : blockCtx->blockCommandInit[blockCtx->index];
+    txValues.push(blockCtx->initSend ? blockCtx->blockCommandContent[blockCtx->index] : blockCtx->blockCommandInit[blockCtx->index]);
     
-
     blockCtx->index++;
     if (blockCtx->index == 8)
     {
@@ -74,7 +73,7 @@ static std::array<uint16_t, 3>  blockCommandTransive(TransmitContext* ctx)
         blockCtx->initSend = true;
     } 
 
-    return ret;
+    return txValues;
 }
 
 TransmitBehaviour blockCommand(const void* src, uint16_t size, uint16_t blockMaxSize) 

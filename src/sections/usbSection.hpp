@@ -29,7 +29,7 @@ public:
 
     void connectLink() 
     { 
-        if (m_playerSeat == 0) m_packetLayer.connectHandshake();
+        if (m_playerSeat != 0) m_packetLayer.connectHandshake();
     }
 
 private:
