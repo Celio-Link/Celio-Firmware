@@ -75,6 +75,8 @@ void assignGpioToPio();
 static uint16_t reverse16Bit(uint16_t x);
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
+// IRQ
+//-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
 static void pioIsr_prepareTransmission()
 {
@@ -102,10 +104,17 @@ static void pioIsr_done()
 static void pioIsr(const void* arg)
 {
     (void)arg;
-    if (pio_interrupt_get(g_pio.device, PREP_NEXT_TRANSMISSION_FLAG)) pioIsr_prepareTransmission();
-    if (pio_interrupt_get(g_pio.device, RX_TX_DONE_FLAG)) pioIsr_done();
-}
+    
+    if (pio_interrupt_get(g_pio.device, PREP_NEXT_TRANSMISSION_FLAG))
+    {
+        pioIsr_prepareTransmission();
+    }
 
+    if (pio_interrupt_get(g_pio.device, RX_TX_DONE_FLAG))
+    {
+        pioIsr_done();
+    } 
+}
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 // Interface
@@ -167,7 +176,7 @@ void link_configureProgram(const pio_program_t* prgramm, uint32_t warp, uint32_t
     uint32_t offset = pio_add_program(g_pio.device, prgramm);
     sm_config_set_wrap(&g_config, offset + wrapTarget, offset + warp);
     assignGpioToPio();
-    pio_sm_init(g_pio.device, g_pio.id, -1, &g_config);
+    pio_sm_init(g_pio.device, g_pio.id, offset, &g_config);
 }
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
@@ -251,7 +260,7 @@ static void configureGBA()
     sm_config_set_in_pins(&g_config, SD_GBA_pin);
     sm_config_set_jmp_pin(&g_config, SD_GBA_pin);
 
-    pio_sm_init(g_pio.device, g_pio.id, -1, &g_config);
+    pio_sm_init(g_pio.device, g_pio.id, 0, &g_config);
 }
 
 static void configureGBC()
@@ -262,7 +271,7 @@ static void configureGBC()
     sm_config_set_in_pins(&g_config, SD_GBC_pin);
     sm_config_set_jmp_pin(&g_config, SD_GBC_pin);
 
-    pio_sm_init(g_pio.device, g_pio.id, -1, &g_config);
+    pio_sm_init(g_pio.device, g_pio.id, 0, &g_config);
 }
 
 static int init()
@@ -279,7 +288,7 @@ static int init()
     irq_enable(PIO0_IRQ_0);
 
     pio_set_irq0_source_enabled(g_pio.device, pis_interrupt0, true);
-    pio_set_irq1_source_enabled(g_pio.device, pis_interrupt1, true);
+    pio_set_irq0_source_enabled(g_pio.device, pis_interrupt1, true);
 
     int ret = pinctrl_apply_state(config, PINCTRL_STATE_DEFAULT);
 
@@ -299,7 +308,7 @@ static int init()
 
     sm_config_set_clkdiv(&g_config, 67.816f); // ~540 ns per inst, 16 inst equal baud 115200
 
-    pio_sm_init(g_pio.device, g_pio.id, -1, &g_config);
+    pio_sm_init(g_pio.device, g_pio.id, 0, &g_config);
 
     return ret;
 }

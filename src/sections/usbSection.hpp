@@ -15,6 +15,7 @@ public:
     {
         m_packetLayer.sendCommand(usbLinkCommand(playerCount));
         m_packetLayer.setSeatNumber(playerSeat);
+        m_packetLayer.playerCount(playerCount);
     }
 
     bool process();

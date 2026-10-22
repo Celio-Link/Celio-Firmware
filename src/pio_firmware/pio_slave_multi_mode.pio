@@ -41,8 +41,11 @@ transmit_for_player:
     nop [31] ; wait a short time to match original behavour better
 
     mov x, status
-    jmp !x transmit_for_player ; tx fifo empty
+    jmp !x transmit_for_player ; more data in fifo
 
-irq RX_TX_DONE_FLAG
+irq RX_TX_DONE_FLAG[31]
+
+nop[31] ; pull unused timing that the DONE_IRQ will put into fifo
+pull
 
 .wrap

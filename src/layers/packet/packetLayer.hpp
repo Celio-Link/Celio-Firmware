@@ -137,7 +137,10 @@ public:
        m_seatNumber = seatNumber;
     }
 
+    void playerCount(uint8_t playerCount) { m_playerCount = playerCount; }
+
     uint8_t getSeatNumber() { return m_seatNumber; }
+
 
 private:
 
@@ -258,7 +261,7 @@ private:
 
     bool m_idle = true;
     uint8_t m_seatNumber = 1;
-    uint8_t m_playerCount;
+    uint8_t m_playerCount = 2;
 
     uint16_t m_receivedHandshake = LINK_HANDSHAKE_DISABLE;
     TxValues m_transmitedHandShake;

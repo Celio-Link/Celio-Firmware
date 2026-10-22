@@ -50,7 +50,7 @@ transive_loop:
 
     transmit_data_for_player:
         mov x, status
-        jmp !x done ; tx fifo empty
+        jmp x-- done ; tx fifo empty
         pull
         set pins, 0b0100 [15] ; UART start bit
 
