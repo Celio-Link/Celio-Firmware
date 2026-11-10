@@ -50,8 +50,6 @@ static pio_sm_config g_config = {};
 
 static uint32_t g_wordCount = 0;
 
-uint16_t g_lastTxValue = 0x00;
-
 static struct NextTransmit g_nextTransmission = {};
 
 static constexpr uint32_t prepWindowCycles = 304;
@@ -258,10 +256,6 @@ void link_setTransiveDoneCallback(TransiveDoneHandler cb, void* user_data)
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
-void link_startTransive() {}
-
-//-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
-
 void link_disable()
 {
     g_wordCount = 0;
@@ -292,9 +286,11 @@ void link_configureProgram(const pio_program_t* prgramm, uint32_t warp, uint32_t
     gpio_pull_up(SD_GBA_pin);
     gpio_pull_up(SD_GBC_pin);
 
-    g_sdLearning = true;
+    // The SD pin learned in an earlier session stays until link_forgetSdPin: a GBA already in its
+    // handshake in seat 2 or 3 does not answer a master that leaves SD released. assignGpioToPio
+    // cleared the pin overrides, so setSdPin applies them again.
     g_sdCandidate = 0;
-    setSdPin(0);
+    setSdPin(g_sdPin);
 
     sm_config_set_set_pins(&g_config, SC_pin, 5);
     sm_config_set_out_pins(&g_config, SD_GBA_pin, 2);
@@ -333,10 +329,11 @@ void link_enableBothSdPins()
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
-void link_setPioPinDirs(uint32_t pin, enum LinkPinDir direction)
+void link_forgetSdPin()
 {
-    bool isOut = (direction == PIN_DOR_OUT);
-    pio_sm_set_consecutive_pindirs(g_pio.device, g_pio.id, pin, 1, isOut);
+    g_sdLearning = true;
+    g_sdCandidate = 0;
+    g_sdPin = 0;
 }
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
